@@ -12,7 +12,7 @@ import { sfx } from './audio.js'
 // flash and a kick of the camera, the blast pays Skill and the zone's Wins, and the camera
 // holds on the crater before easing back to the player. Phases: idle -> fly -> fuse ->
 // blast -> return -> idle. A low chase camera blends over camera.js from just after the
-// release. Zones past the lobby are built once and only shown near the focus.
+// release. Zones past the lobby are built once per world and only shown near the focus.
 
 const R = LOBBY.runway
 const X0 = R.minX + RUN.edgeMargin
@@ -82,7 +82,8 @@ function planHops(time, n) {
 // onFx(msg) is called with the throw's visible moments (throw / fly / skip / boom / end) so net.js can
 // relay them for the other players to draw (remotePlayers.js).
 export function createRun(scene, { progress, hud, blast, onDone, onFx }) {
-  const zones = buildZones(scene)
+  let zones = buildZones(scene)
+  const builtZones = new Map([[RUN.zones, zones]]) // a world's zone list -> its built scenery
   const lines = speedLines()
 
   const run = {
@@ -288,6 +289,13 @@ export function createRun(scene, { progress, hud, blast, onDone, onFx }) {
     // Busy from the throw until the camera is back on the player.
     get busy() {
       return run.phase !== 'idle'
+    },
+    // Another world's lane: its zones replace RUN.zones (never during a throw).
+    setWorld(w) {
+      for (const z of zones) z.group.visible = z.label.visible = false
+      if (!builtZones.has(w.zones)) builtZones.set(w.zones, buildZones(scene, w.zones))
+      zones = builtZones.get(w.zones)
+      RUN.zones = w.zones
     },
     get phase() {
       return run.phase

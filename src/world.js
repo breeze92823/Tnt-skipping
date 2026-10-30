@@ -139,13 +139,8 @@ export function landColliders() {
   }
 }
 
-// The sea around the land and the clouds in the sky (`sea: false` for a sky-only world).
-export function createWorld(scene, { sea: withSea = true } = {}) {
-  if (!withSea) {
-    scene.add(bake(makeClouds())) // ~170 puffs, one material: one draw call
-    return { setSeaColor() {}, update() {} }
-  }
-  // Sea: physical material, two scrolling ripple layers, slightly see-through.
+// Sea: physical material, two scrolling ripple layers, slightly see-through.
+function makeSea() {
   const ripples = paintWaterNormal()
   const normalA = toTexture(ripples, { repeat: WATER.size / 14 })
   const normalB = toTexture(ripples, { repeat: WATER.size / 37 })
@@ -166,16 +161,36 @@ export function createWorld(scene, { sea: withSea = true } = {}) {
     }),
   )
   sea.rotation.x = -Math.PI / 2
-  sea.position.y = WATER.level
   sea.receiveShadow = true
-  scene.add(sea, makeClouds())
+  return { sea, normalA, normalB }
+}
 
+// The clouds in the sky, and the sea round the land for the worlds that have one.
+export function createWorld(scene) {
+  scene.add(bake(makeClouds())) // ~170 puffs, one material: one draw call
+  let water = null
   return {
-    setSeaColor: (color) => sea.material.color.set(color),
-    update(dt, elapsed) {
+    // `sea` { level, color } shows the water (built on first use), null hides it.
+    setSea(sea) {
+      if (sea && !water) {
+        water = makeSea()
+        scene.add(water.sea)
+      }
+      if (water) water.sea.visible = !!sea
+      if (sea) {
+        water.sea.position.y = sea.level
+        water.sea.material.color.set(sea.color)
+      }
+    },
+    update(dt, elapsed, focus) {
+      if (!water?.sea.visible) return
       // One ripple tile is 14 m (A) / 37 m (B); v runs toward -Z.
-      normalA.offset.set(elapsed * 0.012, elapsed * 0.02)
-      normalB.offset.set(-elapsed * 0.008, elapsed * 0.005)
+      water.normalA.offset.set(elapsed * 0.012, elapsed * 0.02)
+      water.normalB.offset.set(-elapsed * 0.008, elapsed * 0.005)
+      // The water follows the focus down the lane, by whole tiles of both layers so it never jumps.
+      const step = 14 * 37
+      water.sea.position.x = Math.round(focus.x / step) * step
+      water.sea.position.z = Math.round(focus.z / step) * step
     },
   }
 }

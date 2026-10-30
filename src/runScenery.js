@@ -4,8 +4,9 @@ import { bake } from './bake.js'
 import { mulberry32 } from './textures.js'
 import { addBox, holed, plain, sign, studMat, topStuds } from './lobby/kit.js'
 import { lighthouse, palm, rock, umbrella } from './lobby/nature.js'
+import { pirateDress } from './lobby/pirate.js'
 
-// The lane past the lobby's green stretch (RUN.zones): each zone is its own floor, dirt
+// The lane past the lobby's green stretch (a world's zones): each zone is its own floor, dirt
 // banks with a coloured stripe and props on the banks, baked to a few meshes and only
 // shown near the focus (run.js stream). A floating sign announces every zone from before
 // its start, with the next one's name under it. The last zone ends at a cliff.
@@ -409,6 +410,7 @@ const dress = {
     else rocket(g, x, y, z, 0.8 + rand() * 0.4)
     if (rand() < 0.3) planet(g, x + side * (20 + rand() * 40), y, z, 1 + rand() * 0.8, rand)
   },
+  ...pirateDress,
 }
 
 function buildZone(zone, d0, d1, rand) {
@@ -430,9 +432,8 @@ function buildZone(zone, d0, d1, rand) {
   return g
 }
 
-export function buildZones(scene) {
+export function buildZones(scene, Z = RUN.zones) {
   const zones = []
-  const Z = RUN.zones
   for (let i = 1; i < Z.length; i++) {
     const zone = Z[i]
     const d0 = zone.start

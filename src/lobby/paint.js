@@ -169,6 +169,36 @@ export function paintLaneMat(base = '#2a6cf0', line = '#9fd2ff', size = 256) {
   return c
 }
 
+// The Jolly Roger: a white skull over crossed bones on black.
+export function paintJollyRoger(w = 192, h = 128) {
+  const c = canvas(w, h)
+  const ctx = c.getContext('2d')
+  ctx.fillStyle = '#14141a'
+  ctx.fillRect(0, 0, w, h)
+  const x = w / 2
+  ctx.strokeStyle = ctx.fillStyle = '#f4efe2'
+  ctx.lineWidth = 11
+  ctx.lineCap = 'round'
+  for (const [a, b] of [[-1, 1], [1, -1]]) {
+    ctx.beginPath()
+    ctx.moveTo(x + a * 54, h * 0.56)
+    ctx.lineTo(x + b * 54, h * 0.92)
+    ctx.stroke()
+  }
+  ctx.beginPath()
+  ctx.arc(x, h * 0.4, 32, 0, Math.PI * 2)
+  ctx.fill()
+  ctx.fillRect(x - 18, h * 0.5, 36, 26)
+  ctx.fillStyle = '#14141a'
+  for (const dx of [-13, 13]) {
+    ctx.beginPath()
+    ctx.arc(x + dx, h * 0.4, 9, 0, Math.PI * 2)
+    ctx.fill()
+  }
+  for (const dx of [-9, 0, 9]) ctx.fillRect(x + dx - 1.5, h * 0.62, 3, 13)
+  return c
+}
+
 // Bullseye: red and white rings.
 export function paintBullseye(size = 128) {
   const c = canvas(size)
@@ -359,43 +389,6 @@ export function paintWoven(base = '#f2b51e', size = 128) {
       ctx.fillStyle = g
       ctx.fillRect(i * s + 1, j * s + 1, s - 2, s - 2)
     }
-  }
-  return c
-}
-
-// Ground glow disc (additive): soft fill and a bright rim ring.
-export function paintGlowDisc(rgb = '255,226,40', size = 256) {
-  const c = canvas(size)
-  const ctx = c.getContext('2d')
-  const m = size / 2
-  const g = ctx.createRadialGradient(m, m, 0, m, m, m)
-  g.addColorStop(0, `rgba(${rgb},0.9)`)
-  g.addColorStop(0.6, `rgba(${rgb},0.75)`)
-  g.addColorStop(0.8, `rgba(${rgb},0.95)`)
-  g.addColorStop(0.86, 'rgba(255,255,230,1)')
-  g.addColorStop(0.9, `rgba(${rgb},0.9)`)
-  g.addColorStop(1, `rgba(${rgb},0)`)
-  ctx.fillStyle = g
-  ctx.fillRect(0, 0, size, size)
-  return c
-}
-
-// Pale round wedge for the spinning glow rays.
-export function paintRays(size = 256, rays = 12) {
-  const c = canvas(size)
-  const ctx = c.getContext('2d')
-  const m = size / 2
-  for (let i = 0; i < rays; i++) {
-    const a = (i / rays) * Math.PI * 2
-    const g = ctx.createRadialGradient(m, m, 0, m, m, m)
-    g.addColorStop(0, 'rgba(255,255,255,0.8)')
-    g.addColorStop(1, 'rgba(255,255,255,0)')
-    ctx.fillStyle = g
-    ctx.beginPath()
-    ctx.moveTo(m, m)
-    ctx.arc(m, m, m, a - 0.08, a + 0.08)
-    ctx.closePath()
-    ctx.fill()
   }
   return c
 }

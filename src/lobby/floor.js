@@ -8,11 +8,10 @@ import { addBox, border, holed, legoBox, patch, plain, studMat, topStuds } from 
 // plaza on it, green patches with yellow trims, pale checker floors, the yellow Throw
 // Zone band, the long green lane to the north between raised dirt banks (the floor the
 // blast can open up, see kit.js holed) and wooden fences.
-const C = LOBBY.colors
-
-export function buildFloor(scene) {
+export function buildFloor(scene, C = LOBBY.colors) {
   const root = new Group()
   const grass = studMat(C.grass)
+  const patchTop = studMat(C.patch ?? C.grass)
   const lane = holed(studMat(C.lane))
   const laneSide = plain(C.laneSide, 0.7)
   const dirt = studMat(C.dirt, { rough: 0.85 })
@@ -57,7 +56,7 @@ export function buildFloor(scene) {
   root.add(patch([[P.minX, P.minZ], [P.maxX, P.minZ], [P.maxX, P.maxZ], [P.minX, P.maxZ]], 0.04, 0.04, plaza))
   for (const pts of LOBBY.checker) root.add(patch(pts, 0.06, 0.02, checker))
   for (const pts of LOBBY.patches) {
-    root.add(patch(pts, 0.07, 0.03, grass))
+    root.add(patch(pts, 0.07, 0.03, patchTop))
     border(root, pts, trim, { width: 0.55, height: 0.13 })
   }
 

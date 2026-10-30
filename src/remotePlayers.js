@@ -218,7 +218,8 @@ class Flight {
   }
 }
 
-export function createRemotePlayers(scene, { blast }) {
+// world(): the id of the world this player is in; people in another one are not drawn.
+export function createRemotePlayers(scene, { blast, world }) {
   const remotes = new Map() // sessionId -> Remote
   const flights = new Map() // sessionId -> Flight
   const list = [] // reused each frame: [{ id, p, d }]
@@ -233,6 +234,7 @@ export function createRemotePlayers(scene, { blast }) {
 
   // Throw effects relayed by the server (run.js onFx): the arm, the TNT in flight, a skip, the blast.
   onNetMessage('fx', (m) => {
+    if ((roster()?.get(m.id)?.world ?? '') !== world()) return
     const now = performance.now()
     if (m.type === 'throw') {
       const who = remotes.get(m.id)
@@ -266,7 +268,7 @@ export function createRemotePlayers(scene, { blast }) {
       const mine = net.sessionId
       list.length = 0
       players.forEach((p, id) => {
-        if (id === mine) return
+        if (id === mine || (p.world ?? '') !== world()) return
         list.push({ id, p, d: Math.hypot(p.x - viewer.x, p.z - viewer.z) })
       })
       list.sort((a, b) => a.d - b.d)

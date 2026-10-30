@@ -32,10 +32,15 @@ export function put(parent, geo, mat, x = 0, y = 0, z = 0, shadows = true) {
 }
 
 export const yawQuat = (yaw) => ({ x: 0, y: Math.sin(yaw / 2), z: 0, w: Math.cos(yaw / 2) })
+// Off while a later world is built: worlds share one layout, so the first one's colliders do for all.
+let solids = true
+export const setSolids = (on) => (solids = on)
 export function solidBox(hx, hy, hz, x, y, z, yaw = 0) {
+  if (!solids) return
   addFixed(RAPIER.ColliderDesc.cuboid(hx, hy, hz), { x, y, z }, yawQuat(yaw))
 }
 export function solidPole(radius, height, x, z) {
+  if (!solids) return
   addFixed(RAPIER.ColliderDesc.cylinder(height / 2, radius), { x, y: height / 2, z })
 }
 

@@ -189,19 +189,25 @@ function floatingIsland(parent, x, y, z, s, rand, waterfalls) {
   }
 }
 
-export function buildNature(scene) {
-  const rand = mulberry32(4242)
-  const M = materials()
-  const statics = new Group()
+// Where the trees beyond the fence stand (west, south and east grass): their trunks are solid, and
+// every world plants its own trees on the same spots.
+export function treeRing(rand) {
   const I = LOBBY.island
-  const R = LOBBY.runway
   const P = LOBBY.plaza
-
-  // Trees beyond the fence on the west, south and east grass.
   const ring = []
   for (let z = P.minZ + 4; z < I.maxZ - 2; z += 7 + rand() * 3) ring.push([I.minX + 3 + rand() * 9, z])
   for (let x = P.minX + 2; x < I.maxX - 4; x += 8 + rand() * 4) ring.push([x, P.maxZ + 6 + rand() * 16])
   for (let z = P.minZ + 3; z < P.maxZ; z += 8 + rand() * 4) ring.push([P.maxX + 4 + rand() * 9, z])
+  return ring
+}
+
+export function buildNature(scene) {
+  const rand = mulberry32(4242)
+  const M = materials()
+  const statics = new Group()
+  const R = LOBBY.runway
+  const P = LOBBY.plaza
+  const ring = treeRing(rand)
   const tower = LOBBY.tower
   for (const [x, z] of ring) {
     if (Math.hypot(x - tower.x, z - tower.z) < tower.radius + 5) continue

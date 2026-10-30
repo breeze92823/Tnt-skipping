@@ -87,3 +87,25 @@
   pointer-events: none;
   z-index: 11;
 }
+
+/* The screen that closes while the world changes (worlds.js). */
+.world-travel {
+  position: fixed;
+  inset: 0;
+  z-index: 130; /* above the HUD's top layer (120) */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: radial-gradient(circle at 50% 46%, #15557a 0, #071f33 70%);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s ease;
+}
+.world-travel.show { opacity: 1; }
+.world-travel-text {
+  font: 700 clamp(26px, 5vw, 56px) Fredoka, sans-serif;
+  color: #ffe14a;
+  text-align: center;
+  text-shadow: 0 3px 0 #3a1a00, 0 0 18px rgba(0, 0, 0, 0.5);
+}

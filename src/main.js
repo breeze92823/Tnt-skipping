@@ -27,6 +27,7 @@ import { createBlast } from './blast.js'
 import { createRun } from './run.js'
 import { createPetFollowers } from './pet3d.js'
 import { createRemotePlayers } from './remotePlayers.js'
+import { createWorlds } from './worlds.js'
 import { createThrower } from './thrower.js'
 import { installFx, updateFx } from './fx.js'
 import { anyWindowOpen, closeTopWindow } from './ui.js'
@@ -88,7 +89,7 @@ bloxity.loadingStep('Starting physics')
 await initPhysics()
 
 lighting = createLighting(scene, renderer, preset)
-const world = createWorld(scene, { sea: false }) // clouds; the lobby floats in the sky
+const world = createWorld(scene) // clouds; the lobby floats in the sky, Pirate Isles adds a sea
 bloxity.loadingStep('Building the lobby')
 const lobby = buildLobby(scene, preset)
 createPlayerBody()
@@ -179,17 +180,19 @@ const run = createRun(scene, { progress, hud, blast, onFx: sendFx, onDone: () =>
 // Everyone else in the room (remotePlayers.js: avatar, skin, animation, pets, their throws) and the
 // local player's own pets. What the others draw of us (equipped TNT / trail / pets) goes out when
 // it changes; the pose goes out from the loop.
-const remotes = createRemotePlayers(scene, { blast })
+const remotes = createRemotePlayers(scene, { blast, world: () => progress.state.world })
 const myPets = createPetFollowers(scene, { max: 6 })
 function syncLoadout() {
   const S = progress.state
   const pets = progress.equippedPets().map((p) => ({ kind: p.kind, variant: p.variant }))
   myPets.setPets(pets)
-  sendLoadout({ tnt: S.tnt, trail: S.trail || '', pets })
+  sendLoadout({ tnt: S.tnt, trail: S.trail || '', pets, world: S.world })
 }
 progress.onChange(syncLoadout)
 syncLoadout()
-thrower = createThrower(scene, { run, getAvatar: () => avatar, canAct: () => !anyWindowOpen() })
+// --- Worlds: the portal's world swaps the look in place (worlds.js) ------------------------
+const worlds = createWorlds({ progress, hud, lobby, run, lighting, world })
+thrower = createThrower(scene, { run, getAvatar: () => avatar, canAct: () => !anyWindowOpen() && !worlds.busy })
 hud.on('throw', thrower.requestThrow)
 
 // --- Hold-E interactions ---------------------------------------------------------
@@ -197,17 +200,20 @@ hud.on('throw', thrower.requestThrow)
 // prompt works too) for INTERACT.holdMs.
 installInteract()
 const nearXZ = (x, z, r) => player.grounded && Math.hypot(player.position.x - x, player.position.z - z) <= r
+const nearSquare = (x, z, r) => player.grounded && Math.max(Math.abs(player.position.x - x), Math.abs(player.position.z - z)) <= r
 const shop = LOBBY.shop
+// The Dragon's pad is solid, so it is bought from beside it, not from on top; it comes first
+// because the front row's nearest pad reaches past the Dragon's west side.
 const pads = [
+  { it: { id: shop.dragon.id, z: shop.dragon.z, cost: shop.dragon.cost }, x: shop.dragon.x, near: (x, z) => nearSquare(x, z, shop.dragon.reach) },
   ...shop.front.map((it) => ({ it, x: shop.frontX })),
   ...shop.back.map((it) => ({ it, x: shop.backX })),
-  { it: { id: shop.dragon.id, z: shop.dragon.z, cost: shop.dragon.cost }, x: shop.dragon.x },
 ]
-for (const { it, x } of pads) {
+for (const { it, x, near = (px, pz) => nearXZ(px, pz, INTERACT.tntRange) } of pads) {
   const tnt = progress.tntOf(it.id)
   registerZone({
     id: `tnt:${it.id}`,
-    isNear: () => nearXZ(x, it.z, INTERACT.tntRange),
+    isNear: () => near(x, it.z),
     label: () => (progress.state.tnt === it.id ? null : progress.state.tnts.includes(it.id) ? `equip ${tnt.name}` : `buy ${tnt.name} (${it.cost})`),
     onConfirm: () => {
       const owned = progress.state.tnts.includes(it.id)
@@ -252,6 +258,15 @@ registerZone({
       hud.toast(err)
     } else sfx.claim()
   },
+})
+// The portal to the next world, from a spot in front of it.
+const PT = LOBBY.portal
+const portalSpot = { x: PT.x + Math.sin(PT.yaw) * PT.useAt, z: PT.z + Math.cos(PT.yaw) * PT.useAt }
+registerZone({
+  id: 'portal',
+  isNear: () => nearXZ(portalSpot.x, portalSpot.z, INTERACT.portalRange),
+  label: worlds.portalLabel,
+  onConfirm: worlds.usePortal,
 })
 onKey(INTERACT.key, () => {
   if (isInteractShowing()) pressInteract(true)
@@ -365,7 +380,8 @@ function frame(forcedDt) {
   remotes.update(dt, elapsed, p)
 
   closeEggWhenFar()
-  setInteractEnabled(!anyWindowOpen() && !run.busy)
+  worlds.update()
+  setInteractEnabled(!anyWindowOpen() && !run.busy && !worlds.busy)
   updateInteract()
   thrower.update(dt)
   run.update(dt, elapsed)
@@ -375,7 +391,7 @@ function frame(forcedDt) {
   training.update(dt, camera)
   run.applyCamera(camera, dt)
   const focus = run.focus(playerGroup.position)
-  world.update(dt, elapsed)
+  world.update(dt, elapsed, focus)
   lobby.update(dt, elapsed, camera, renderer.domElement.height)
   lighting.update(dt, focus)
   updateFx()
@@ -410,5 +426,5 @@ if (import.meta.env.DEV) {
   const step = (n = 1, dt = 1 / 60) => {
     for (let i = 0; i < n; i++) frame(dt)
   }
-  window.__game = { remotes, myPets, player, scene, renderer, camera, postfx, bodies: bodyCount, toggleMode, teleport, setView, step, progress, windows, run, thrower, blast }
+  window.__game = { remotes, myPets, player, scene, renderer, camera, postfx, bodies: bodyCount, toggleMode, teleport, setView, step, progress, windows, run, thrower, blast, worlds }
 }

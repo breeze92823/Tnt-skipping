@@ -108,7 +108,8 @@
 .touch-top {
   position: absolute;
   top: calc(var(--safe-t) + var(--pad));
-  right: calc(var(--safe-r) + var(--pad));
+  /* Left of the HUD's round button (hud.css .hud-topright, 44px+ wide, above this layer). */
+  right: calc(var(--safe-r) + var(--pad) + 56px);
   display: flex;
   gap: 10px;
 }

@@ -160,12 +160,20 @@ export const models = {
     fuse(g, new Vector3(0, h + 0.55, 0), fuses, 0.18)
     return g
   },
+  // The shop's Dragon TNT cut down to the size of the others (held and thrown).
+  dragon(fuses) {
+    const g = new Group()
+    const model = dragonTnt(fuses)
+    model.scale.setScalar(0.5)
+    g.add(model)
+    return g
+  },
 }
 
 // The model each TNT of the Inventory throws as: `look` -> a model above (tinted bundles
 // and rewards are crates / royals). Built once per id and use; spun about its centre, with
 // the fuse tip and the height its centre rests at when it lies on the lane.
-const LOOKS = { stick: 'stick', bomb: 'bomb', banded: 'trio', keg: 'barrel', golden: ['royal', '#ffcc22'], royal: ['royal', '#ff7ad9'], gift: ['crate', '#ff5a8a'] }
+const LOOKS = { stick: 'stick', bomb: 'bomb', banded: 'trio', keg: 'barrel', golden: ['royal', '#ffcc22'], royal: ['royal', '#ff7ad9'], dragon: 'dragon', gift: ['crate', '#ff5a8a'] }
 const built = new Map()
 export function tntModel(id, use) {
   const key = `${id}|${use}`
@@ -253,6 +261,26 @@ const label = (status, skill, cost, height = 2.3) =>
     height,
   )
 
+// The shop's raised step for the back row, with stairs down to the front row (a world's floor).
+export function buildShopStep(scene, C = LOBBY.colors) {
+  const S = LOBBY.shop
+  const root = new Group()
+  const checker = studMat(C.checkB, { alt: C.checkA })
+  const side = plain(C.stepSide, 0.6)
+  const minZ = -10.5
+  const maxZ = 12
+  const depth = maxZ - minZ
+  const backEdge = S.backX + 2.6
+  addBox(root, 6, S.stepHeight, depth, topStuds(checker, side), backEdge - 3, S.stepHeight / 2, (minZ + maxZ) / 2)
+  localSolid(root, 3, S.stepHeight / 2, depth / 2, backEdge - 3, S.stepHeight / 2, (minZ + maxZ) / 2)
+  for (let i = 1; i <= 2; i++) {
+    const h = (S.stepHeight * i) / 3
+    addBox(root, 0.8, h, depth, topStuds(checker, side), backEdge + 0.8 * (3 - i) - 0.4, h / 2, (minZ + maxZ) / 2)
+    localSolid(root, 0.4, h / 2, depth / 2, backEdge + 0.8 * (3 - i) - 0.4, h / 2, (minZ + maxZ) / 2)
+  }
+  scene.add(root)
+}
+
 // The TNT shop west of spawn: front row on the checker floor, back row on a
 // raised step, the Dragon TNT on its own pad in front. Returns fuse tips and
 // the spinning displays.
@@ -260,21 +288,6 @@ export function buildShop(scene, fuses) {
   const S = LOBBY.shop
   const root = new Group()
   const spinners = []
-  const checker = studMat(C.checkB, { alt: C.checkA })
-  const sideWhite = plain('#e9eaee', 0.6)
-
-  // Raised step for the back row (with stairs down to the front row).
-  const minZ = -10.5
-  const maxZ = 12
-  const depth = maxZ - minZ
-  const backEdge = S.backX + 2.6
-  addBox(root, 6, S.stepHeight, depth, topStuds(checker, sideWhite), backEdge - 3, S.stepHeight / 2, (minZ + maxZ) / 2)
-  localSolid(root, 3, S.stepHeight / 2, depth / 2, backEdge - 3, S.stepHeight / 2, (minZ + maxZ) / 2)
-  for (let i = 1; i <= 2; i++) {
-    const h = (S.stepHeight * i) / 3
-    addBox(root, 0.8, h, depth, topStuds(checker, sideWhite), backEdge + 0.8 * (3 - i) - 0.4, h / 2, (minZ + maxZ) / 2)
-    localSolid(root, 0.4, h / 2, depth / 2, backEdge + 0.8 * (3 - i) - 0.4, h / 2, (minZ + maxZ) / 2)
-  }
 
   const show = (item, x, y, z) => {
     pad(root, x, y, z, item.pad)

@@ -1,4 +1,4 @@
-import { BOOSTS, DAILY, EGGS, PET_KINDS, PET_VARIANTS, PETS, PLAYTIME, REBIRTH, RUN, TNTS, TRAILS } from './config.js'
+import { BOOSTS, DAILY, EGGS, PET_KINDS, PET_VARIANTS, PETS, PLAYTIME, REBIRTH, RUN, TNTS, TRAILS, WORLDS } from './config.js'
 
 // The player's progress and the rules the windows act on (windows.js): SKILL, Wins,
 // rebirths, TNT, pets, eggs, potions, trails, Playtime and Daily Rewards. Actions return
@@ -34,6 +34,8 @@ function fresh() {
     playStart: now(),
     playClaimed: [],
     daily: { streak: 0, last: 0 }, // days claimed in this streak, ms of the last claim
+    worlds: [], // worlds unlocked for good (ids): rebirths reset SKILL, not these
+    world: '', // the world the player is in (WORLDS id)
   }
 }
 
@@ -41,9 +43,16 @@ export function createProgress() {
   const S = fresh()
   const listeners = new Set()
   const hatchListeners = new Set()
+  const unlockListeners = new Set()
   const changed = () => listeners.forEach((fn) => fn())
 
   const tntOf = (id) => TNTS.find((t) => t.id === id)
+  // Reaching a world's SKILL opens it for good. Returns the worlds that just opened.
+  function unlockWorlds() {
+    const opened = WORLDS.filter((w) => w.skill && S.skill >= w.skill && !S.worlds.includes(w.id))
+    for (const w of opened) S.worlds.push(w.id)
+    return opened
+  }
   const boostLeft = (type) => Math.max(0, Math.ceil((S.boostUntil[type] - now()) / 1000))
   const boostMult = (type) => (boostLeft(type) ? BOOSTS[type].mult : 1)
   const petMult = (p) => PET_KINDS[p.kind].mult * PET_VARIANTS[p.variant].mult
@@ -135,6 +144,10 @@ export function createProgress() {
     onHatch(fn) {
       hatchListeners.add(fn)
     },
+    // fn(world) when SKILL reaches a world in play (never for one a save already had).
+    onWorldUnlock(fn) {
+      unlockListeners.add(fn)
+    },
     snapshot: () => JSON.parse(JSON.stringify(S)),
     // The saved doc from the server (net.js). The session clocks (Playtime Rewards) restart.
     hydrate(doc) {
@@ -145,6 +158,8 @@ export function createProgress() {
       for (const k of ['eggs', 'potions', 'boostUntil']) S[k] = { ...base[k], ...doc[k] }
       if (!S.tnts.includes('stick')) S.tnts.unshift('stick')
       if (!S.tnts.includes(S.tnt)) S.tnt = 'stick'
+      S.world = doc.world || ''
+      unlockWorlds()
       S.playStart = now()
       S.playClaimed = []
       changed()
@@ -161,7 +176,9 @@ export function createProgress() {
     addSkill(n, mult = true) {
       const before = S.skill
       S.skill = Math.min(maxSkill(), S.skill + (mult ? n * api.skillMult() : n))
+      const opened = unlockWorlds()
       changed()
+      for (const w of opened) unlockListeners.forEach((fn) => fn(w))
       return S.skill - before
     },
     addWins(n, mult = true) {
@@ -190,6 +207,14 @@ export function createProgress() {
       changed()
     },
     skipRebirth: () => 'Purchases are coming soon!',
+
+    // --- Worlds ---
+    worldOpen: (w) => !w.skill || S.worlds.includes(w.id),
+    goToWorld(w) {
+      if (!api.worldOpen(w)) return `Reach ${w.skill / 1e6}M Skill to enter ${w.name}!`
+      S.world = w.id
+      changed()
+    },
 
     // --- TNT ---
     tntOf,

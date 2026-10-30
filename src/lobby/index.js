@@ -1,32 +1,53 @@
 import { Group, Vector3 } from 'three'
+import { WORLDS } from '../config.js'
+import { setSolids } from '../propkit.js'
 import { mulberry32 } from '../textures.js'
 import { buildFloor } from './floor.js'
 import { buildNature } from './nature.js'
-import { buildShop } from './tnt.js'
-import { buildClaim, buildEggs, buildGlitch, buildLeaderboards, buildPortal, buildTower } from './landmarks.js'
+import { buildPirateNature } from './pirate.js'
+import { buildShop, buildShopStep } from './tnt.js'
+import { buildEggs, buildGlitch, buildLeaderboards, buildPortal, buildTower } from './landmarks.js'
 import { buildLanes } from './lanes.js'
 import { emitter, setParticleDensity, setRGB, updateParticles } from './fx.js'
 import { bakeStatic } from './kit.js'
 
 // The whole lobby: floor + scenery + set pieces + lanes, and the particle
-// effects tied to them (fuse sparks, portal and claim sparkles, glitch pixels,
+// effects tied to them (fuse sparks, portal sparkles, glitch pixels,
 // gold glitter, lane glints). update(dt, t, camera) animates all of it.
+// The shop, eggs, lanes, booths and boards are one set shared by every world; the floor, scenery,
+// portal and tower are built per world, each on its first visit (setWorld).
 export function buildLobby(scene, preset) {
   setParticleDensity(preset.particles)
   const fuses = []
   const root = new Group()
-  buildFloor(root)
-  const nature = buildNature(root)
   const shop = buildShop(root, fuses)
-  const portal = buildPortal(root)
   const glitch = buildGlitch(root)
-  const claim = buildClaim(root)
   const eggs = buildEggs(root)
   const leaderboards = buildLeaderboards(root)
-  const tower = buildTower(root)
   const lanes = buildLanes(root)
   bakeStatic(root) // everything that never moves -> one mesh per material
   scene.add(root)
+
+  const looks = new Map() // world id -> { group, nature, portal, tower }
+  function buildLook(w) {
+    const group = new Group()
+    setSolids(!looks.size)
+    buildFloor(group, w.colors)
+    buildShopStep(group, w.colors)
+    const nature = w.id === 'pirate' ? buildPirateNature(group) : buildNature(group)
+    const portal = buildPortal(group, w.portal)
+    const tower = buildTower(group, w.tower)
+    setSolids(true)
+    bakeStatic(group)
+    scene.add(group)
+    const look = { group, nature, portal, tower }
+    looks.set(w.id, look)
+    return look
+  }
+  let active = buildLook(WORLDS[0])
+  let portalOpen = false
+  // The particles below sit where every world's set pieces sit.
+  const { portal, tower } = active
 
   const rand = mulberry32(1234)
   const v = new Vector3()
@@ -88,23 +109,6 @@ export function buildLobby(scene, preset) {
       p.life = 1.4 + rand() * 1.2
       p.size = 0.25 + rand() * 0.3
       setRGB(p, rand() < 0.6 ? '#7ff4ff' : '#ffffff')
-    },
-  })
-  // Claim circle: golden sparkles rising out of the ring.
-  emitter(scene, {
-    count: 70,
-    shrink: 0.3,
-    spawn(p) {
-      claim.ringPoint(v, rand)
-      p.x = v.x
-      p.y = v.y
-      p.z = v.z
-      p.vx = 0
-      p.vy = 1 + rand() * 1.5
-      p.vz = 0
-      p.life = 1 + rand() * 1
-      p.size = 0.3 + rand() * 0.35
-      setRGB(p, rand() < 0.7 ? '#ffe23a' : '#ffffff')
     },
   })
   // Glitch booth: pink / cyan pixels floating up.
@@ -178,12 +182,23 @@ export function buildLobby(scene, preset) {
   return {
     lanes,
     setLeaderboards: leaderboards.setBoards, // the server's lists onto the stand's four screens
+    setWorld(w) {
+      active.group.visible = false
+      active = looks.get(w.id) ?? buildLook(w)
+      active.group.visible = true
+      active.portal.setOpen(portalOpen)
+    },
+    // The portal's sign: unlocked or not.
+    setPortalOpen(on) {
+      if (on === portalOpen) return
+      portalOpen = on
+      active.portal.setOpen(on)
+    },
     update(dt, t, camera, viewportHeight) {
-      nature.update(dt, t)
+      active.nature.update(dt, t)
       shop.update(dt, t)
-      portal.update(dt, t)
+      active.portal.update(dt, t)
       glitch.update(dt, t)
-      claim.update(dt, t)
       eggs.update(dt, t)
       lanes.update(dt, t, camera)
       updateParticles(dt, viewportHeight, camera.fov)

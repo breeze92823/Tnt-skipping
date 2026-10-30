@@ -1,8 +1,6 @@
 import {
-  AdditiveBlending,
   CanvasTexture,
   CatmullRomCurve3,
-  CircleGeometry,
   ConeGeometry,
   CylinderGeometry,
   DoubleSide,
@@ -28,10 +26,10 @@ import {
 import { LOBBY } from '../config.js'
 import { neon } from '../propkit.js'
 import { mulberry32 } from '../textures.js'
-import { addBox, canvasTex, dynamic, localSolid, plain, sign, studMat, topStuds } from './kit.js'
-import { compact, hoursMinutes, paintEgg, paintGlitchScreen, paintGlowDisc, paintLeaderboard, paintRays } from './paint.js'
+import { addBox, canvasTex, dynamic, localSolid, plain, resign, sign, studMat, topStuds } from './kit.js'
+import { compact, hoursMinutes, paintEgg, paintGlitchScreen, paintLeaderboard } from './paint.js'
 
-// The set pieces: Pirate Isles portal, Glitch Egg booth, the CLAIM chest,
+// The set pieces: Pirate Isles portal, Glitch Egg booth,
 // the egg row with the lion showcase, the leaderboard stand and the giant
 // TNT tower. Each builder returns { update(dt, t) } plus anchor points for fx.
 const C = LOBBY.colors
@@ -53,7 +51,8 @@ function archShape(w, h) {
   return s
 }
 
-export function buildPortal(scene) {
+// `look`: this world's sign and swirl (WORLDS portal). setOpen(on) flips the sign's second line.
+export function buildPortal(scene, look) {
   const P = LOBBY.portal
   const g = new Group()
   g.position.set(P.x, 0.07, P.z)
@@ -134,12 +133,12 @@ export function buildPortal(scene) {
   frameMesh.castShadow = true
   g.add(frameMesh)
   const portalMat = new ShaderMaterial({
-    uniforms: { uTime: { value: 0 }, uW: { value: W }, uH: { value: H } },
+    uniforms: { uTime: { value: 0 }, uW: { value: W }, uH: { value: H }, uDeep: { value: new Vector3(...look.deep) }, uBright: { value: new Vector3(...look.bright) } },
     vertexShader: /* glsl */ `
       uniform float uW; uniform float uH; varying vec2 vUv;
       void main() { vUv = vec2(position.x / uW + 0.5, position.y / uH); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
     fragmentShader: /* glsl */ `
-      uniform float uTime; varying vec2 vUv;
+      uniform float uTime; uniform vec3 uDeep; uniform vec3 uBright; varying vec2 vUv;
       void main() {
         vec2 p = vUv - vec2(0.5, 0.45);
         p.x *= 0.7;
@@ -147,10 +146,8 @@ export function buildPortal(scene) {
         float a = atan(p.y, p.x);
         float swirl = sin(a * 4.0 + r * 22.0 - uTime * 3.5) * 0.5 + 0.5;
         float ripple = sin(r * 40.0 - uTime * 5.0) * 0.5 + 0.5;
-        vec3 deep = vec3(0.05, 0.62, 0.95);
-        vec3 bright = vec3(0.55, 1.0, 1.0);
-        vec3 col = mix(deep, bright, swirl * 0.55 + ripple * 0.15 + (1.0 - smoothstep(0.0, 0.5, r)) * 0.35);
-        col += vec3(0.6, 1.0, 1.0) * smoothstep(0.4, 0.5, max(abs(vUv.x - 0.5), 0.0)) * 0.6;
+        vec3 col = mix(uDeep, uBright, swirl * 0.55 + ripple * 0.15 + (1.0 - smoothstep(0.0, 0.5, r)) * 0.35);
+        col += uBright * smoothstep(0.4, 0.5, max(abs(vUv.x - 0.5), 0.0)) * 0.6;
         gl_FragColor = vec4(col * 1.25, 1.0);
         ${fxShaderEnd}
       }`,
@@ -166,16 +163,14 @@ export function buildPortal(scene) {
     const m = addBox(g, 0.7, 0.05, 0.22, dash, Math.sin(a) * 4.6, 0.02, 2.6 + Math.cos(a) * 1.8, { shadow: false })
     m.rotation.y = -a
   }
-  const light = new PointLight('#3ad8ff', 18, 14, 2)
+  const light = new PointLight(look.light, 18, 14, 2)
   light.position.set(0, 2.6, 1.5)
   g.add(light)
-  const title = sign(
-    [
-      { text: P.title, px: 80, color: '#ffffff' },
-      { text: P.sub, px: 48, color: '#ffffff' },
-    ],
-    2.2,
-  )
+  const titleLines = (sub) => [
+    { text: look.title, px: 80, color: '#ffffff' },
+    { text: sub, px: 48, color: '#ffffff' },
+  ]
+  const title = sign(titleLines(look.sub), 2.2)
   title.position.set(0, 9.4, 0)
   g.add(title)
   scene.add(g)
@@ -184,6 +179,9 @@ export function buildPortal(scene) {
 
   return {
     group: g,
+    setOpen(on) {
+      if (look.open) resign(title, titleLines(on ? look.open : look.sub), 2.2)
+    },
     // Point on the portal surface (local), for sparkles.
     surfacePoint(out, rand) {
       out.set((rand() - 0.5) * W * 0.9, 0.5 + rand() * H * 0.9, 0.1 + rand() * 0.8)
@@ -339,83 +337,6 @@ export function buildGlitch(scene) {
         screenTex.needsUpdate = true
       }
       light.intensity = 12 + (Math.sin(t * 13) > 0.7 ? 6 : 0)
-    },
-  }
-}
-
-// --- CLAIM chest ----------------------------------------------------------------------
-export function buildClaim(scene) {
-  const Cl = LOBBY.claim
-  const g = new Group()
-  g.position.set(Cl.x, 0.1, Cl.z)
-  const disc = new Mesh(
-    new CircleGeometry(Cl.radius, 48),
-    new MeshBasicMaterial({ map: canvasTex(paintGlowDisc()), transparent: true, opacity: 0.6, depthWrite: false, blending: AdditiveBlending }),
-  )
-  disc.rotation.x = -Math.PI / 2
-  disc.position.y = 0.05
-  disc.renderOrder = 2
-  g.add(disc)
-  const under = new Mesh(new CircleGeometry(Cl.radius * 0.92, 48), new MeshBasicMaterial({ color: '#ffe62a' }))
-  under.rotation.x = -Math.PI / 2
-  under.position.y = 0.03
-  g.add(under)
-  const rays = new Mesh(
-    new CircleGeometry(Cl.radius * 1.15, 48),
-    new MeshBasicMaterial({ map: canvasTex(paintRays()), color: '#fff27a', transparent: true, opacity: 0.45, depthWrite: false, blending: AdditiveBlending }),
-  )
-  rays.rotation.x = -Math.PI / 2
-  rays.position.y = 0.08
-  g.add(dynamic(rays))
-
-  // The chest: red studded body, gold bands and lock, stepped lid.
-  const chest = new Group()
-  const red = studMat('#e3201a', { rough: 0.45 })
-  const redSide = plain('#d81c16', 0.45)
-  const goldM = gold()
-  addBox(chest, 3, 1.4, 2, topStuds(red, redSide), 0, 0.7, 0)
-  addBox(chest, 3.08, 0.5, 2.08, topStuds(red, redSide), 0, 1.65, 0)
-  addBox(chest, 3.04, 0.42, 1.6, topStuds(red, redSide), 0, 2.1, 0)
-  addBox(chest, 3.02, 0.32, 0.9, topStuds(red, redSide), 0, 2.45, 0)
-  for (const x of [-0.85, 0.85]) {
-    addBox(chest, 0.42, 1.48, 2.12, goldM, x, 0.72, 0)
-    addBox(chest, 0.44, 0.52, 2.16, goldM, x, 1.66, 0)
-    addBox(chest, 0.44, 0.44, 1.66, goldM, x, 2.11, 0)
-    addBox(chest, 0.44, 0.34, 0.96, goldM, x, 2.46, 0)
-  }
-  addBox(chest, 3.12, 0.16, 2.12, goldM, 0, 1.4, 0)
-  addBox(chest, 0.6, 0.7, 0.14, goldM, 0, 1.35, 1.06)
-  addBox(chest, 0.16, 0.26, 0.05, plain('#1a1a1a'), 0, 1.3, 1.14)
-  chest.position.y = 0.1
-  chest.rotation.y = 0.5
-  g.add(dynamic(chest))
-  const light = new PointLight('#ffd21a', 10, 10, 2)
-  light.position.set(1.5, 3.6, 2)
-  g.add(light)
-  const title = sign(
-    [
-      { text: 'CLAIM', px: 140, gradient: ['#ff2bd6', '#7a3dff', '#2fa8ff', '#3bdc4a', '#ffe11f', '#ff9a1f'], outline: '#14142a', outlineWidth: 22 },
-      { text: 'Join our group to claim!', px: 46, color: '#ffd21a', outline: '#3a1a00' },
-    ],
-    2.6,
-  )
-  title.position.set(0, 3.9, 0)
-  g.add(title)
-  scene.add(g)
-  localSolid(g, 1.6, 1.3, 1.6, 0, 1.3, 0)
-
-  return {
-    group: g,
-    ringPoint(out, rand) {
-      const a = rand() * Math.PI * 2
-      const r = Cl.radius * (0.3 + rand() * 0.6)
-      return out.set(Cl.x + Math.cos(a) * r, 0.2, Cl.z + Math.sin(a) * r)
-    },
-    update(dt, t) {
-      rays.rotation.z = t * 0.4
-      disc.material.opacity = 0.5 + Math.sin(t * 3) * 0.12
-      chest.position.y = 0.1 + Math.abs(Math.sin(t * 2)) * 0.12
-      light.intensity = 9 + Math.sin(t * 3) * 2
     },
   }
 }
@@ -624,13 +545,14 @@ export function buildLeaderboards(scene) {
 }
 
 // --- Giant TNT tower ---------------------------------------------------------------------
-export function buildTower(scene) {
+// `look`: this world's colours (WORLDS tower).
+export function buildTower(scene, look) {
   const T = LOBBY.tower
   const g = new Group()
   g.position.set(T.x, 0, T.z)
-  const red = plain('#e3201a', 0.5)
-  const white = plain('#f5f5f5', 0.5)
-  const black = plain('#1d1d1d', 0.5)
+  const red = plain(look.body, 0.5)
+  const white = plain(look.light, 0.5)
+  const black = plain(look.dark, 0.5)
   const bands = [[0, 8, red], [8, 10.5, black], [10.5, 24, red], [24, 27, white], [27, 31, red], [31, 34, white], [34, T.height, red]]
   for (const [a, b, m] of bands) {
     const c = new Mesh(new CylinderGeometry(T.radius, T.radius, b - a, 32), m)
@@ -639,7 +561,7 @@ export function buildTower(scene) {
     c.receiveShadow = true
     g.add(c)
   }
-  const cap = new Mesh(new CylinderGeometry(T.radius * 0.96, T.radius, 0.6, 32), plain('#b3150f', 0.6))
+  const cap = new Mesh(new CylinderGeometry(T.radius * 0.96, T.radius, 0.6, 32), plain(look.cap, 0.6))
   cap.position.y = T.height + 0.3
   g.add(cap)
   const fusePts = [new Vector3(0, T.height + 0.5, 0), new Vector3(0.5, T.height + 3, 0.2), new Vector3(2.2, T.height + 5, 0.4), new Vector3(3.6, T.height + 5.2, 0.3)]

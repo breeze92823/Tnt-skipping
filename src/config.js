@@ -21,7 +21,7 @@ export const BEACH = {
   tile: 18, // m per sand texture tile
   fenceHeight: 3, // invisible wall around the sand so nobody walks into the sea
 }
-export const WATER = { level: -0.6, size: 1400, color: '#12a9e6', shallow: '#7ff0ff' }
+export const WATER = { level: -0.6, size: 2800, color: '#12a9e6', shallow: '#7ff0ff' }
 export const SPAWN = { x: 0, y: 0.05, z: 2 }
 export const SPAWN_FACING = Math.PI // yaw the character faces on spawn (PI = toward -Z)
 
@@ -303,6 +303,7 @@ export const LOBBY = {
     woodDark: '#6f4320',
     gold: '#f7c21a',
     white: '#f4f5f7',
+    stepSide: '#e9eaee', // the shop step's sides
   },
   island: { minX: -50, maxX: 64, minZ: -30, maxZ: 64, depth: 6 },
   plaza: { minX: -34, maxX: 50, minZ: -30, maxZ: 38 }, // grey floor inside the fence
@@ -341,11 +342,11 @@ export const LOBBY = {
       { z: -4, kind: 'royal', id: 'golden', tint: '#ffcc22', skill: '+1.25K Skill', cost: '40M Wins', pad: '#e8a019' },
       { z: -8, kind: 'royal', id: 'royal', tint: '#ff7ad9', skill: '+3.5K Skill', cost: '250M Wins', pad: '#d64fb0' },
     ],
-    dragon: { x: -11, z: 0, id: 'dragon', stock: 'STOCK: 1000/1000', name: 'DRAGON TNT', perk: 'ALWAYS 200% BETTER', cost: '5B Wins', price: 'ONLY \u{1F3C6} 5B WINS' },
+    // reach: half-width of the square its buy prompt covers (the solid pad's 1.8 + PLAYER_DIMS.radius + a little)
+    dragon: { x: -11, z: 0, reach: 2.8, id: 'dragon', stock:'STOCK: 1000/1000', name: 'DRAGON TNT', perk: 'ALWAYS 200% BETTER', cost: '5B Wins', price: 'ONLY \u{1F3C6} 5B WINS' },
   },
-  portal: { x: -10.5, z: -15, yaw: 0.75, title: 'PIRATE ISLES', sub: 'THROW WITH 400M' },
+  portal: { x: -10.5, z: -15, yaw: 0.75, useAt: 3.2 }, // useAt: metres in front of it where E works; each world's sign and swirl are in WORLDS
   glitch: { x: -4.5, z: -24, yaw: 0.45, kind: 'glitch', title: 'GLITCH EGG', price: '\u{1F3C6} 1B WINS', useAt: 3 }, // useAt: metres in front of the booth where the hatch panel opens
-  claim: { x: -8.5, z: 7.5, radius: 3.6 },
   eggs: [
     { kind: 'common', x: 8, z: 16, name: 'COMMON EGG', cost: '50 WINS', pad: 'wood' },
     { kind: 'uncommon', x: 4, z: 18.5, name: 'UNCOMMON EGG', cost: '800 WINS', pad: 'steel' },
@@ -595,6 +596,57 @@ export const DAILY = {
   ],
 }
 
+// --- Worlds (worlds.js) ------------------------------------------------------------------
+// A world is the same lobby, shop, lanes, eggs, throw, prices and Wins under another look: the
+// first entry is the look the rest of this file describes, the others override it. `skill` is the
+// SKILL that opens a world for good (rebirths reset SKILL, never `worlds`, the unlocked list in the
+// save). `portal` is that world's portal: the sign and swirl, and `to` the world it leads to.
+// `sea` puts water round the land ({ level, color }, level below the deepest crater step, BLAST.levels).
+const PIRATE_LANE = '#16aebf'
+const pirateZone = (label, props, floor, dirt, bank, wall, trim, title, outline, sub, dust = [floor, dirt, '#ffffff']) => ({ label, props, floor, dirt, bank, wall, trim, title: { color: title, outline }, sub, dust })
+const PIRATE_ZONES = [
+  pirateZone('Cannon Cove', 'lagoon', PIRATE_LANE, '#0d7f92', '#f3dc96', '#c9a05e', '#ffc21a', '#3fe6f0', '#07303f', '#fff0c8', ['#8ff0f6', '#ffffff', '#f3dc96']),
+  pirateZone('Palm Lagoon', 'lagoon', '#efe0ae', '#b98f5c', '#f3dc96', '#c9a05e', '#16aebf', '#3fe6f0', '#07303f', '#ffd23a'),
+  pirateZone('Treasure Sands', 'treasure', '#f5c96a', '#b0782e', '#efbb56', '#a8702e', '#e8321e', '#ffd23a', '#5a2a00', '#fff0c8', ['#ffd23a', '#fff6c8', '#d89a2e']),
+  pirateZone('Barnacle Bay', 'docks', '#a8764a', '#6a4426', '#d8c08a', '#6f4a2a', '#ffc21a', '#ffc98a', '#3a1c08', '#fff0c8'),
+  pirateZone('Coral Reef', 'coral', '#ff8f7a', '#c8504a', '#2ac4c8', '#128a96', '#ffe14a', '#ff9ab0', '#5a0a2a', '#fff6a0', ['#ffc0b0', '#ffffff', '#5ae0e8']),
+  pirateZone('Kraken Deep', 'kraken', '#1f5a8a', '#0f2f50', '#174a78', '#0c2a48', '#c86aff', '#c89aff', '#160a3a', '#bff6ff', ['#6ab0e8', '#ffffff', '#a06ae8']),
+  pirateZone('Buccaneer Bluffs', 'bluffs', '#c8a070', '#7a5a38', '#7fae52', '#6e5236', '#e8321e', '#ffcf8a', '#3a1c08', '#ffe9b8'),
+  pirateZone('Skull Rock', 'skull', '#8d8a84', '#55524c', '#6f6c66', '#3f3d3a', '#ffcf3a', '#f0ece0', '#1e1c18', '#ffcf3a', ['#c8c4b8', '#f0ece0', '#6a6660']),
+  pirateZone('Ghost Fleet', 'ghost', '#4a5a66', '#222c36', '#34424e', '#222c36', '#7dffd8', '#a8ffe6', '#06241e', '#d8fff4', ['#8fa8b4', '#d8fff4', '#4a5a66']),
+  pirateZone('Powder Keg Point', 'keg', '#6a4a34', '#2e2016', '#4e3626', '#2e2016', '#ff5a1a', '#ff9a4a', '#3a0a00', '#ffd28a', ['#ff9a4a', '#ffd28a', '#5a4030']),
+  pirateZone('Volcano Isle', 'volcano', '#3f2f34', '#1c1418', '#2f2328', '#1c1418', '#ff6a1a', '#ff8a2e', '#3a0a00', '#ffd28a', ['#ff8a2e', '#ffd28a', '#5a3a3a']),
+  pirateZone('Storm Seas', 'storm', '#3f6f86', '#1c3848', '#2f566c', '#1c3848', '#ffe14a', '#d8f0ff', '#0a2a40', '#ffe14a', ['#d8f0ff', '#ffffff', '#6a9ab4']),
+  pirateZone("Davy Jones' Locker", 'locker', '#123a5a', '#081c30', '#0e2e4a', '#081c30', '#2bf0d0', '#5af0d8', '#04202a', '#ffe14a', ['#5af0d8', '#ffffff', '#2a6a8a']),
+]
+const worldZones = (themes) => RUN.zones.map((zone, i) => ({ ...zone, ...themes[i] }))
+export const WORLDS = [
+  {
+    id: '', // the start world ('' on the backend's roster)
+    name: 'TNT Island',
+    colors: LOBBY.colors,
+    sky: TIME_OF_DAY,
+    zones: RUN.zones,
+    tower: { body: '#e3201a', light: '#f5f5f5', dark: '#1d1d1d', cap: '#b3150f' },
+    portal: { to: 'pirate', title: 'PIRATE ISLES', sub: 'NEEDS 400M SKILL', open: 'UNLOCKED', deep: [0.05, 0.62, 0.95], bright: [0.55, 1, 1], light: '#3ad8ff' },
+  },
+  {
+    id: 'pirate',
+    name: 'Pirate Isles',
+    skill: 400e6,
+    colors: { ...LOBBY.colors, plaza: '#c7a274', checkA: '#e6cfa0', checkB: '#b8895a', grass: '#f3dc96', patch: '#5fd23e', lane: PIRATE_LANE, laneSide: '#0d7f92', dirt: '#c9a05e', dirtDark: '#a07a42', stone: '#9c8f7a', wood: '#7a4f2a', woodDark: '#523218', white: '#fff6e0', stepSide: '#c9a878' },
+    sky: {
+      day: { ...TIME_OF_DAY.day, zenith: '#1f86e0', horizon: '#ffe3b8', sunColor: '#ffe9c4', sunIntensity: 2.1, sunElevation: 44, hemiSky: '#fff0d8', hemiGround: '#e8d2a0', hemiIntensity: 1.5 },
+      night: { ...TIME_OF_DAY.night, zenith: '#040c2a', horizon: '#1a3f6e', hemiSky: '#34507e' },
+    },
+    sea: { level: -2.4, color: '#14bcd8' },
+    zones: worldZones(PIRATE_ZONES),
+    tower: { body: '#8a5a30', light: '#ffc21a', dark: '#2a2a30', cap: '#6a4024' }, // a giant powder keg
+    portal: { to: '', title: 'TNT ISLAND', sub: 'BACK TO WORLD 1', deep: [0.08, 0.62, 0.2], bright: [0.7, 1, 0.5], light: '#7dff6a' },
+  },
+]
+export const WORLD_FADE = 450 // ms the screen takes to close before the world changes
+
 export const FONT_FAMILY = 'Fredoka'
 
 export function clamp(n, min, max) {
@@ -614,4 +666,4 @@ export function coerceSetting(key, raw) {
 
 // Hold-E interactions (interact.js): hold E (or the prompt on touch) for holdMs next to a TNT pad to
 // buy it or an egg to open its hatch panel, which closes again past eggLeave.
-export const INTERACT = { holdMs: 1200, key: 'KeyE', tntRange: 2.2, eggRange: 2.8, eggLeave: 4.5 }
+export const INTERACT = { holdMs: 1200, key: 'KeyE', tntRange: 2.2, eggRange: 2.8, eggLeave: 4.5, portalRange: 3.4 }
