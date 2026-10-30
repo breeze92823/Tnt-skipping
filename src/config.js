@@ -374,9 +374,9 @@ export const LOBBY = {
       { mult: '4x SKILL', req: '2', icon: 'ball', width: 10, rim: '#13a98d', track: '#2fd6b5', style: 'glass' },
       { mult: '10x SKILL', req: '5', icon: 'ball', width: 10, rim: '#4a33d6', track: '#7a5cff', style: 'plate' },
       { mult: '20x SKILL', req: '7', icon: 'ball', width: 10.4, rim: '#e9eef5', track: '#3a9bff', style: 'water' },
-      { mult: '3x SKILL', req: '99', icon: 'robux', allWorlds: true, width: 11.2, rim: '#8f98a6', track: '#7a4dff', style: 'plate', edge: '#e8231c' },
-      { mult: '15x SKILL', req: '249', icon: 'robux', allWorlds: true, width: 12, rim: '#e8b21a', track: '#ffd23a', style: 'plate' },
-      { mult: '50x SKILL', req: '599', icon: 'robux', allWorlds: true, width: 13.2, rim: '#3a2fd0', track: '#5a3df5', style: 'plate', edge: '#ffe14a', neon: true },
+      { mult: '3x SKILL', req: '9', icon: 'ball', allWorlds: true, width: 11.2, rim: '#8f98a6', track: '#7a4dff', style: 'plate', edge: '#e8231c' },
+      { mult: '15x SKILL', req: '11', icon: 'ball', allWorlds: true, width: 12, rim: '#e8b21a', track: '#ffd23a', style: 'plate' },
+      { mult: '50x SKILL', req: '13', icon: 'ball', allWorlds: true, width: 13.2, rim: '#3a2fd0', track: '#5a3df5', style: 'plate', edge: '#ffe14a', neon: true },
     ],
   },
   // Floating islands in the sky: [x, y, z, scale].
