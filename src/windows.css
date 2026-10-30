@@ -157,6 +157,7 @@
 .rb-val { position: absolute; left: calc(130 * var(--u)); right: calc(10 * var(--u)); top: 0; bottom: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: calc(38 * var(--u)); line-height: 1.02; }
 .rb-val b { font-size: calc(42 * var(--u)); }
 .rb-warn { margin-top: calc(32 * var(--u)); font-size: calc(43 * var(--u)); line-height: 1; color: #ff2a2a; white-space: nowrap; }
+.rb-wins { color: #ffd23a; }
 .rb-bar {
   --bg: linear-gradient(#e6e8ec, #c8cbd2);
   position: relative;

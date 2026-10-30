@@ -474,9 +474,11 @@ export const BLAST = {
 // Rebirth: SKILL climbs the level from 1 to `level` (where it caps); every level takes
 // perLevel * scale^rebirths SKILL (760 to the first rebirth, 57M to the seventh).
 // Rebirthing resets SKILL (so the level) and adds +1 to
-// the x SKILL multiplier for good. Skip Rebirth is a paid purchase (`skipPrice` premium
-// coins), which only toasts "coming soon" for now.
-export const REBIRTH = { perLevel: 40, scale: 6.5, level: 20, skipPrice: 20 }
+// the x SKILL multiplier for good. Every rebirth past `winsFrom` also multiplies Wins by
+// `winsScale` for good: that is the end game, as rebirth 8 takes 372M SKILL, so it can never
+// speed up the road to 100M, and it brings Dragon TNT to about 10 h of play. Skip Rebirth is
+// a paid purchase (`skipPrice` premium coins), which only toasts "coming soon" for now.
+export const REBIRTH = { perLevel: 40, scale: 6.5, level: 20, skipPrice: 20, winsFrom: 7, winsScale: 10 }
 // TNT (Inventory > TNT): the equipped one adds `skill` SKILL per throw. Bought with Wins
 // (tap a card); `look` picks the icon (icons.js tntIcon), `colors` tint the bundles.
 // `reward: true` ones are never sold and only show once owned (Daily Rewards day 7).

@@ -153,7 +153,8 @@ export function createProgress() {
     // --- Numbers ---
     // The x SKILL multiplier: (1 + rebirths) x equipped pets (summed) x the Skill potion.
     skillMult: () => (1 + S.rebirths) * Math.max(1, equippedPets().reduce((s, p) => s + petMult(p), 0)) * boostMult('skill'),
-    winsMult: () => (TRAILS.find((t) => t.id === S.trail)?.boost ?? 1) * boostMult('wins'),
+    // The x Wins multiplier: the trail x the Wins potion x REBIRTH.winsScale per rebirth past winsFrom.
+    winsMult: () => (TRAILS.find((t) => t.id === S.trail)?.boost ?? 1) * boostMult('wins') * REBIRTH.winsScale ** Math.max(0, S.rebirths - REBIRTH.winsFrom),
     // SKILL one throw of the equipped TNT gives.
     throwSkill: () => (tntOf(S.tnt)?.skill ?? 1) * api.skillMult(),
     // Both return what was really added (SKILL stops at the rebirth level).

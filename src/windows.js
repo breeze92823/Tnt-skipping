@@ -141,14 +141,15 @@ export function createWindows(game, hud) {
     const n = 1 + S.rebirths
     const card = (head, v) => `<div class="rb-col"><div class="rb-head stroke">${head}</div><div class="rb-card studs"><span class="rb-bolt">${ICON.bolt}</span><span class="rb-val stroke"><b>x${fmt(v)}</b>SKILL</span></div></div>`
     const t = game.rebirthT()
+    const wins = S.rebirths >= REBIRTH.winsFrom ? `x${REBIRTH.winsScale} WINS` : '' // the end-game bonus of this rebirth
     w.body.append(
       el('div', 'rb-cols', `${card('Before', n)}<span class="rb-arrow">${ICON.arrow}</span>${card('After', n + 1)}`),
-      el('div', 'rb-warn stroke', 'Resets your LEVEL and SKILL!'),
+      el('div', 'rb-warn stroke', wins ? `Resets LEVEL and SKILL! <span class="rb-wins">${wins}</span>` : 'Resets your LEVEL and SKILL!'),
       el('div', 'rb-bar studs', `<div class="rb-fill" style="width:${(t * 100).toFixed(1)}%"></div><span class="rb-label stroke">Level ${game.rebirthLevel()} / Level ${REBIRTH.level}</span>`),
     )
     const btns = el('div', 'rb-btns')
     btns.append(
-      btn('rb-btn green studs', s('Rebirth'), act(game.doRebirth, w.body, 'Rebirthed! +1x SKILL')),
+      btn('rb-btn green studs', s('Rebirth'), act(game.doRebirth, w.body, `Rebirthed! +1x SKILL${wins ? `, ${wins}` : ''}`)),
       btn('rb-btn purple studs', `${s('Skip Rebirth')}<span class="rb-price stroke">${coinIcon}${REBIRTH.skipPrice}</span>`, act(game.skipRebirth, w.body)),
     )
     w.body.append(btns)
