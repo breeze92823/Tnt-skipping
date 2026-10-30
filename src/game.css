@@ -1,0 +1,89 @@
+/* Throw feedback over the world (fx.js, run.js). Sized in --u like the HUD. */
+.fx-layer {
+  --u: max(0.5px, min(0.0521vw, 0.101dvh));
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 13;
+  overflow: hidden;
+  font-family: 'Fredoka', system-ui, sans-serif;
+  font-weight: 700;
+  color: #fff;
+}
+.fx-layer svg { display: block; }
+.fx-skill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.15em;
+  font-size: max(18px, calc(34 * var(--u)));
+  line-height: 1;
+  white-space: nowrap;
+  animation: fx-fade 1s ease-out forwards;
+}
+.fx-skill.big { font-size: max(30px, calc(62 * var(--u))); color: #ffe14a; animation-duration: 1.8s; }
+.fx-skill .bolt { width: 0.8em; }
+@keyframes fx-fade {
+  0% { opacity: 0; }
+  10%, 70% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+.fx-zone {
+  position: absolute;
+  left: 50%;
+  top: 27%;
+  transform: translateX(-50%);
+  font-size: max(30px, calc(84 * var(--u)));
+  white-space: nowrap;
+  animation: fx-pop 2.2s ease-out forwards;
+}
+.fx-zone .name { --o: calc(4 * var(--u)); }
+@keyframes fx-pop {
+  0% { opacity: 0; transform: translateX(-50%) scale(0.5); }
+  9% { opacity: 1; transform: translateX(-50%) scale(1.14); }
+  16% { transform: translateX(-50%) scale(1); }
+  80% { opacity: 1; }
+  100% { opacity: 0; transform: translateX(-50%) translateY(calc(-16 * var(--u))); }
+}
+
+.fx-trophy {
+  position: absolute;
+  left: 50%;
+  top: 22%;
+  display: flex;
+  align-items: center;
+  gap: 0.18em;
+  font-size: max(36px, calc(80 * var(--u)));
+  transform: translateX(-50%);
+  animation: fx-pop 2.6s ease-out forwards;
+}
+.fx-trophy svg { width: 1.25em; }
+.fx-trophy .small svg { width: 0.75em; }
+.fx-trophy .small { animation: fx-wiggle 0.5s ease-in-out 2; }
+.fx-trophy b { font-weight: 700; --o: calc(4 * var(--u)); }
+@keyframes fx-wiggle {
+  25% { transform: rotate(-14deg); }
+  75% { transform: rotate(14deg); }
+}
+.fx-wins {
+  position: absolute;
+  left: 50%;
+  top: 60%;
+  font-size: max(24px, calc(46 * var(--u)));
+  color: #ffd23a;
+  --ink: #3a2000;
+  white-space: nowrap;
+  animation: fx-pop 2.4s ease-out forwards;
+}
+
+.speed-lines {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 11;
+}

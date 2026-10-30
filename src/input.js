@@ -30,9 +30,20 @@ export function requestLock() {
   if (r instanceof Promise) r.catch(() => {})
 }
 
+// Hands the cursor back, for a window opened from the keyboard.
+export function releaseLock() {
+  if (isLocked()) document.exitPointerLock()
+}
+
 // Registers a one-shot key (fires on keydown, never on auto-repeat).
 export function onKey(code, fn) {
   keyActions.set(code, fn)
+}
+
+// A left click while the cursor is grabbed (it cannot reach the HUD then).
+let lockedClick = null
+export function onLockedClick(fn) {
+  lockedClick = fn
 }
 
 function recomputeMove() {
@@ -83,6 +94,7 @@ export function install(showMenu, canvasEl) {
   })
   window.addEventListener('pointerdown', (e) => {
     const onWorld = e.target === canvas
+    if (e.button === 0 && isLocked()) lockedClick?.()
     if (e.button === 2 && !isLocked()) orbiting = true
     if (e.button === 0 && onWorld && e.pointerType === 'mouse') {
       // A click on the world takes the cursor (Esc gives it back; never on touch: there is no

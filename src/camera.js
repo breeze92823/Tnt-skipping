@@ -37,6 +37,18 @@ export function syncYawToPlayer() {
   state.yaw = player.facing + Math.PI
 }
 
+// Swings the orbit toward `yaw` the short way round (the throw turns the view down the lane).
+export function easeYaw(yaw, k) {
+  state.yaw += Math.atan2(Math.sin(yaw - state.yaw), Math.cos(yaw - state.yaw)) * k
+}
+
+// Points the orbit (yaw 0 looks north, -PI/2 east) at a set pitch and boom length (dev views).
+export function setOrbit(yaw, pitch = CAMERA.startPitch, distance = CAMERA.distance) {
+  state.yaw = yaw
+  state.pitch = pitch
+  zoomTarget = zoomEased = distance
+}
+
 const clamp = (v, lo, hi) => (v < lo ? lo : v > hi ? hi : v)
 
 // Entering first person keeps the view direction; leaving it backs the boom out

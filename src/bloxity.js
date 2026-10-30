@@ -145,6 +145,9 @@ export function init() {
     const onLocalhost = /^(localhost|127\.0\.0\.1)$/.test(window.location.hostname)
     SDK.init(onLocalhost ? { gameSlug: GAME_SLUG, portalUrl: 'https://bloxity.io' } : { gameSlug: GAME_SLUG })
     SDK.game.loadingStep(`Loading ${GAME_TITLE}`)
+    // Declared on every start (it also shows the portal's trophy button); the dashboard owns the
+    // boards after their first declaration.
+    SDK.leaderboard?.define?.(LEADERBOARDS)
 
     for (const key of Object.keys(SETTINGS)) {
       const off = SDK.settings.listen(key, (raw) => {
@@ -327,6 +330,95 @@ export async function locateRoom(id) {
 export function updateRoom(roomId) {
   try {
     sdk()?.game?.updateRoom?.(roomId)
+  } catch {
+    // Ignore.
+  }
+}
+
+// A shareable link that opens the game in `roomId` (the id updateRoom() was given), '' without the
+// SDK. The portal's own toolbar invite sends friends there too; this is for the in-game button.
+export function inviteLink(roomId) {
+  try {
+    return sdk()?.social?.getInviteFriendsLink?.({ gameSlug: GAME_SLUG, roomId }) || ''
+  } catch {
+    return ''
+  }
+}
+
+// --- Leaderboards -------------------------------------------------------
+// ids are permanent. All three keep the player's best: wins only grow, skill drops to 0 on a rebirth
+// (the board keeps the peak), and a throw's distance is a personal best.
+const LEADERBOARDS = [
+  { id: 'wins', label: 'Wins', order: 'desc', mode: 'best', format: 'compact' },
+  { id: 'skill', label: 'Top Skills', order: 'desc', mode: 'best', format: 'compact' },
+  { id: 'best-throw', label: 'Best Throw (m)', order: 'desc', mode: 'best', format: 'number' },
+]
+
+const submitted = {} // board id -> last score sent (or in flight)
+const SUBMIT_GAP_MS = 20000
+let lastSubmitAt = 0
+
+// Sends the current score of every board that rose since the last send ({ wins, skill, 'best-throw' }),
+// at most every SUBMIT_GAP_MS unless `force` (a rebirth or the end of a throw is final). Guests and
+// the missing SDK are skipped; a rejected score is retried next time. Never throws.
+export function submitScores(scores, force = false) {
+  const SDK = sdk()
+  if (!SDK?.leaderboard?.submit || !authState.user) return
+  const now = performance.now()
+  if (!force && now - lastSubmitAt < SUBMIT_GAP_MS) return
+  for (const { id } of LEADERBOARDS) {
+    const score = Math.floor(scores[id])
+    if (!Number.isFinite(score) || score <= 0 || score <= (submitted[id] ?? 0)) continue
+    lastSubmitAt = now
+    const prev = submitted[id]
+    submitted[id] = score
+    try {
+      Promise.resolve(SDK.leaderboard.submit(id, score))
+        .then((res) => {
+          if (res == null) submitted[id] = prev // not accepted: try again next time
+        })
+        .catch(() => {
+          submitted[id] = prev
+        })
+    } catch {
+      submitted[id] = prev
+    }
+  }
+}
+
+// Top rows of a board as [{ name, value, userId }], or null when unavailable (offline / older SDK).
+export async function getTopScores(id, limit = 9) {
+  try {
+    const res = await sdk()?.leaderboard?.getTop?.(id, { limit })
+    const list = Array.isArray(res) ? res : res?.entries ?? res?.rows ?? res?.results ?? null
+    if (!Array.isArray(list)) return null
+    return list.slice(0, limit).map((r) => ({
+      name: r.displayName || r.username || r.name || 'Player',
+      value: Number(r.score ?? r.value ?? 0),
+      userId: r.userId ?? r.id ?? null,
+    }))
+  } catch {
+    return null
+  }
+}
+
+// Opens the portal's board panel; false outside Bloxity.
+export function openLeaderboard(id) {
+  try {
+    return !!sdk()?.leaderboard?.open?.(id)
+  } catch {
+    return false
+  }
+}
+
+// Tells the portal who is in the room (join toasts, who is here). `already` = they were there when
+// we joined (playerInRoom), else they came after us (playerJoined).
+export function reportPlayer(username, already) {
+  if (!username) return
+  try {
+    const game = sdk()?.game
+    if (already) game?.playerInRoom?.(username)
+    else game?.playerJoined?.(username)
   } catch {
     // Ignore.
   }

@@ -1,898 +1,366 @@
-/* HUD (hud.js). Sizes are reference-screenshot pixels times --u (set in JS);
-   on touch every control grows to at least --tap. */
+/* HUD (hud.js). One design unit --u = 1px on a 1920x990 screen, scaled with the
+   viewport (never below a readable minimum on phones). */
 .hud {
-  --u: 1px;
-  --o: max(1px, calc(2.4 * var(--u))); /* text outline */
-  --tap: 0px;
-  --sl: env(safe-area-inset-left, 0px);
-  --sr: env(safe-area-inset-right, 0px);
-  --st: env(safe-area-inset-top, 0px);
-  --sb: env(safe-area-inset-bottom, 0px);
-  --ink: #15151f;
-  --panel: rgba(18, 20, 26, 0.6);
+  --u: max(0.5px, min(0.0521vw, 0.101dvh));
+  --res-top: 64px;
+  --safe-l: env(safe-area-inset-left, 0px);
+  --safe-r: env(safe-area-inset-right, 0px);
+  --safe-t: env(safe-area-inset-top, 0px);
+  --safe-b: env(safe-area-inset-bottom, 0px);
   position: fixed;
   inset: 0;
-  z-index: 20; /* above the touch zones, below portal overlays */
+  z-index: 12; /* above the touch zones (touch.css); the root itself lets touches through */
   pointer-events: none;
-  overflow: hidden;
   font-family: 'Fredoka', system-ui, sans-serif;
   font-weight: 700;
-  line-height: 1;
   color: #fff;
-}
-.touch-ui .hud {
-  --tap: 44px;
+  user-select: none;
+  -webkit-user-select: none;
 }
 .hud * {
   box-sizing: border-box;
-  user-select: none;
-  -webkit-user-select: none;
-  -webkit-touch-callout: none;
+  touch-action: none;
   -webkit-tap-highlight-color: transparent;
 }
-.hud svg {
-  display: block;
-  width: 100%;
-  height: 100%;
-  overflow: visible;
-}
-
-.hud-btn {
-  position: relative;
+.hud button {
   pointer-events: auto;
-  touch-action: none;
-  display: block;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  background: none;
-  font: inherit;
+  font-family: inherit;
+  font-weight: inherit;
   color: inherit;
+  border: 0;
+  padding: 0;
   cursor: pointer;
+  transition: transform 0.08s;
 }
-/* Icon-only buttons: the svg is centred at --icon of the button. */
-.hud-round,
-.hud-slot {
+.hud button.pressed { transform: scale(0.92); }
+.hud [hidden] { display: none !important; }
+.hud svg { display: block; }
+
+/* Cartoon outline on text (shared with the windows). */
+.stroke {
+  --o: calc(2.6 * var(--u));
+  --ink: #16131f;
+  text-shadow:
+    var(--o) 0 0 var(--ink), calc(-1 * var(--o)) 0 0 var(--ink), 0 var(--o) 0 var(--ink), 0 calc(-1 * var(--o)) 0 var(--ink),
+    calc(0.7 * var(--o)) calc(0.7 * var(--o)) 0 var(--ink), calc(-0.7 * var(--o)) calc(0.7 * var(--o)) 0 var(--ink),
+    calc(0.7 * var(--o)) calc(-0.7 * var(--o)) 0 var(--ink), calc(-0.7 * var(--o)) calc(-0.7 * var(--o)) 0 var(--ink),
+    0 calc(1.5 * var(--o)) 0 var(--ink);
+}
+
+/* --- Top right: Daily Rewards ------------------------------------------------- */
+.hud-topright {
+  position: absolute;
+  right: calc(var(--safe-r) + 14 * var(--u));
+  top: calc(var(--safe-t) + 12 * var(--u));
   display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.hud-round > svg,
-.hud-slot > svg {
-  width: var(--icon);
-  height: var(--icon);
-  flex: none;
-}
-.hud-btn:focus-visible {
-  outline: 3px solid #ffe14a;
-  outline-offset: 2px;
-}
-.hud-btn.pop {
-  animation: hud-pop 0.18s ease-out;
-}
-@keyframes hud-pop {
-  45% {
-    transform: scale(0.88);
-  }
-}
-
-/* Outlined text: a stroke painted under the fill. */
-.ol {
-  -webkit-text-stroke: calc(2 * var(--o)) var(--ink);
-  paint-order: stroke fill;
-  white-space: nowrap;
-}
-/* Gradient text: the element draws the outline, a copy on top (data-t) draws the
-   --fill gradient clipped to the glyphs. */
-.grad {
-  position: relative;
-  display: inline-block;
-  white-space: nowrap;
-  color: var(--ink);
-  -webkit-text-stroke: calc(2 * var(--o)) var(--ink);
-}
-.grad::before {
-  content: attr(data-t);
-  position: absolute;
-  left: 0;
-  top: 0;
-  color: transparent;
-  -webkit-text-stroke: 0;
-  background-image: var(--fill);
-  -webkit-background-clip: text;
-  background-clip: text;
-}
-
-/* --- Top row (round buttons; the top-left corner is Boxity's toolbar) ------------------------------------ */
-.hud-top {
-  position: absolute;
-  left: var(--sl);
-  right: var(--sr);
-  top: var(--st);
-  height: 0;
-}
-
-/* --- Timer ------------------------------------------------------------------------------- */
-.hud-timer {
-  --w: calc(466 * var(--u));
-  position: absolute;
-  left: 50%;
-  top: calc(17 * var(--u));
-  width: var(--w);
-  height: calc(65 * var(--u));
-  margin-left: calc(var(--w) / -2);
-  container-type: inline-size;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(64, 112, 168, 0.5);
-}
-.timer-text {
-  font-size: 12.5cqw;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 0.01em;
-}
-
-/* --- Podium: 1st / 2nd / 3rd medals hanging under the timer ------------------------------- */
-.hud-podium {
-  --m: calc(92 * var(--u));
-  position: absolute;
-  left: 50%;
-  top: calc(var(--st) + 97 * var(--u));
-  display: flex;
-  gap: calc(30 * var(--u));
-  margin-left: calc(-168 * var(--u)); /* (3 medals + 2 gaps) / 2 */
-}
-.hud-podium.empty {
-  display: none;
-}
-.medal {
-  --ring: #ffc21a;
-  --inner: #ffe680;
-  position: relative;
-  width: var(--m);
-  height: var(--m);
-  border-radius: 50%;
-  border: max(2px, calc(6 * var(--u))) solid var(--ring);
-  background: radial-gradient(circle at 50% 38%, #fffbe6, var(--inner));
-  box-shadow: 0 0 0 max(1px, calc(2 * var(--u))) var(--ink);
-}
-.medal-2 {
-  --ring: #d5d9e0;
-  --inner: #a9b0bb;
-}
-.medal-3 {
-  --ring: #e0662a;
-  --inner: #f0a060;
-}
-.medal-ribbon {
-  position: absolute;
-  left: 50%;
-  bottom: 55%;
-  z-index: -1; /* behind the medal and the timer panel */
-  width: var(--m);
-  height: calc(var(--m) * 1.15); /* reaches up behind the timer */
-  margin-left: calc(var(--m) * -0.5);
-}
-.medal-face {
-  position: absolute;
-  inset: 6% 8% 10%;
-}
-.medal-label {
-  position: absolute;
-  left: 50%;
-  bottom: calc(var(--m) * -0.17);
-  transform: translateX(-50%);
-  font-size: calc(var(--m) * 0.39);
-  --fill: linear-gradient(#fff36a 20%, #ffa400 85%);
-}
-.medal-2 .medal-label {
-  --fill: linear-gradient(#ffffff 20%, #aab2c0 85%);
-}
-.medal-3 .medal-label {
-  --fill: linear-gradient(#ffc08a 20%, #e2401a 85%);
-}
-
-/* --- Once a Day ----------------------------------------------------------------------------- */
-.hud-daily {
-  position: absolute;
-  left: calc(50% + 280 * var(--u));
-  top: calc(8 * var(--u));
-  width: calc(150 * var(--u));
-  height: calc(98 * var(--u));
-}
-.daily-gift {
-  position: absolute;
-  left: calc(12 * var(--u));
-  top: calc(-6 * var(--u));
-  width: calc(86 * var(--u));
-  height: calc(76 * var(--u));
-  transform: rotate(-8deg);
-}
-.daily-count {
-  position: absolute;
-  left: calc(62 * var(--u));
-  top: calc(14 * var(--u));
-  display: flex;
-  align-items: center;
-  gap: calc(2 * var(--u));
-}
-.daily-gem {
-  width: calc(32 * var(--u));
-  height: calc(32 * var(--u));
-  filter: hue-rotate(180deg) saturate(1.4);
-}
-.daily-num {
-  font-size: calc(40 * var(--u));
-  --fill: linear-gradient(#b9ff6a, #1fbf2a);
-}
-.daily-label {
-  position: absolute;
-  left: 50%;
-  bottom: 0;
-  transform: translateX(-50%);
-  font-size: calc(27 * var(--u));
-  color: #ff2626;
-  -webkit-text-stroke: calc(2 * var(--o)) #fff;
-}
-
-/* --- Top-right round buttons --------------------------------------------------------------------- */
-.hud-tr {
-  position: absolute;
-  right: calc(15 * var(--u));
-  top: calc(14 * var(--u));
-  display: flex;
-  gap: calc(14 * var(--u));
+  gap: calc(10 * var(--u));
 }
 .hud-round {
-  width: max(var(--tap), calc(56 * var(--u)));
-  height: max(var(--tap), calc(56 * var(--u)));
-  --icon: 62%;
-  border-radius: 50%;
-  background: var(--panel);
-}
-.hud-dot {
-  position: absolute;
-  top: 2%;
-  right: 2%;
-  width: 22%;
-  height: 22%;
-  border-radius: 50%;
-  background: #ff5a1f;
-  box-shadow: 0 0 0 max(1px, calc(2 * var(--u))) rgba(0, 0, 0, 0.35);
-}
-
-/* --- Left: CLAIM + menu tiles ------------------------------------------------------------------------- */
-.hud-left {
-  --tile: max(var(--tap), calc(88 * var(--u)));
-  position: absolute;
-  left: calc(var(--sl) + 10 * var(--u));
-  top: calc(var(--st) + 240 * var(--u));
-}
-.hud-claim {
-  width: calc(212 * var(--u));
-  height: calc(72 * var(--u));
-  min-height: var(--tap);
-}
-.hud-claim::before {
-  content: '';
-  position: absolute;
-  left: calc(56 * var(--u));
-  right: 0;
-  top: calc(16 * var(--u));
-  bottom: calc(2 * var(--u));
-  border: max(1.5px, calc(3 * var(--u))) solid var(--ink);
-  border-radius: calc(14 * var(--u));
-  background: linear-gradient(#ffffff, #d9dde4);
-  box-shadow: inset 0 calc(-5 * var(--u)) 0 rgba(0, 0, 0, 0.1);
-}
-.claim-gift {
-  position: absolute;
-  left: 0;
-  top: calc(4 * var(--u));
-  width: calc(68 * var(--u));
-  height: calc(68 * var(--u));
-}
-.claim-badge {
-  position: absolute;
-  left: calc(44 * var(--u));
-  top: 0;
-  width: calc(30 * var(--u));
-  height: calc(30 * var(--u));
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  background: #3fcf3a;
-  box-shadow: 0 0 0 max(1px, calc(2 * var(--u))) #fff;
-  font-size: calc(19 * var(--u));
-}
-.claim-text {
-  position: absolute;
-  left: calc(80 * var(--u));
-  top: calc(26 * var(--u));
-  font-size: calc(37 * var(--u));
-  --fill: linear-gradient(#fff56a 20%, #ffb000 80%);
-}
-.hud-grid {
-  display: grid;
-  grid-template-columns: var(--tile) var(--tile);
-  gap: calc(16 * var(--u)) calc(20 * var(--u));
-  margin: calc(18 * var(--u)) 0 0 calc(15 * var(--u));
-}
-.hud-tile {
-  width: var(--tile);
-  height: var(--tile);
-  border: max(1.5px, calc(3 * var(--u))) solid #0d2a5c;
-  border-radius: calc(14 * var(--u));
-  background: linear-gradient(#58b8ff, #1e6fe6);
-  box-shadow:
-    inset 0 calc(3 * var(--u)) 0 rgba(255, 255, 255, 0.35),
-    inset 0 calc(-5 * var(--u)) 0 rgba(0, 0, 0, 0.18);
-}
-.tile-store {
-  border-color: #5a1a08;
-  background: linear-gradient(#ffa046, #ee4d1c);
-}
-.tile-icon img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-}
-.tile-icon {
-  position: absolute;
-  left: 8%;
-  right: 8%;
-  top: 3%;
-  height: 68%;
-}
-.tile-label {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 4%;
-  text-align: center;
-  font-size: calc(var(--tile) * 0.28);
-}
-.tile-alert {
-  position: absolute;
-  top: -12%;
-  right: -12%;
-  width: 36%;
-  height: 36%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  background: #ff2a2a;
-  box-shadow: 0 0 0 max(1.5px, calc(3 * var(--u))) #fff;
-  font-size: calc(var(--tile) * 0.26);
-}
-
-/* --- Right: promos, stats, autos, boosts ------------------------------------------------------------- */
-.hud-right {
-  position: absolute;
-  right: calc(var(--sr) + 30 * var(--u));
-  top: calc(var(--st) + 228 * var(--u));
-  display: flex;
-  flex-direction: column;
-  gap: calc(13 * var(--u));
-}
-.right-a,
-.right-b {
-  /* wide enough for three boosts once they grow to --tap */
-  width: var(--rw);
-  display: flex;
-  flex-direction: column;
-  gap: calc(13 * var(--u));
-}
-.hud-promos {
-  display: flex;
-  justify-content: space-between;
-  height: calc(85 * var(--u));
-}
-.promo {
-  width: calc(72 * var(--u));
-  height: 100%;
-}
-.promo-icon {
-  position: absolute;
-  left: calc(4 * var(--u));
-  top: 0;
-  width: calc(64 * var(--u));
-  height: calc(64 * var(--u));
-}
-.promo-label {
-  position: absolute;
-  left: 50%;
-  bottom: calc(4 * var(--u));
-  transform: translateX(-50%);
-  font-size: calc(20 * var(--u));
-}
-.ready-title {
-  position: absolute;
-  left: 50%;
-  top: calc(20 * var(--u));
-  transform: translateX(-50%);
-  font-size: calc(23 * var(--u));
-}
-.ready-free {
-  position: absolute;
-  left: 50%;
-  bottom: calc(6 * var(--u));
-  transform: translateX(-50%);
-  font-size: calc(19 * var(--u));
-  color: #4dff4a;
-}
-.statue-only {
-  position: absolute;
-  right: calc(-6 * var(--u));
-  top: calc(-4 * var(--u));
-  transform: rotate(14deg);
-  font-size: calc(14 * var(--u));
-  color: #ffe14a;
-}
-.statue-x20 {
-  position: absolute;
-  right: 0;
-  bottom: calc(4 * var(--u));
-  display: flex;
-  align-items: center;
-  font-size: calc(22 * var(--u));
-  color: #ffe14a;
-}
-.statue-trophy {
-  width: calc(22 * var(--u));
-  height: calc(22 * var(--u));
-}
-
-.hud-stats {
-  display: flex;
-  flex-direction: column;
-  gap: calc(13 * var(--u));
-}
-.hud-stat {
   position: relative;
-  height: calc(45 * var(--u));
+  width: max(44px, calc(62 * var(--u)));
+  height: max(44px, calc(62 * var(--u)));
+  border-radius: 50%;
+  background: rgba(20, 20, 26, 0.6);
+  display: grid;
+  place-items: center;
+}
+.hud-round > svg { width: 64%; }
+.badge {
+  position: absolute;
+  top: -6px;
+  right: -4px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #e8262d;
+  border: 2px solid #fff;
+  display: grid;
+  place-items: center;
+  font-size: 13px;
+  --o: 1.4px;
+}
+
+/* --- Left column: Wave Height Surf's slate menu grid ----------------------------- */
+.hud-grid {
+  --s: clamp(6px, min(0.55vw, 1.05vh), 12px);
+  --tile: max(46px, calc(var(--s) * 7.4));
+  position: absolute;
+  left: calc(var(--safe-l) + var(--s) * 1.2);
+  top: max(39%, calc(var(--res-top) + 8px));
+  display: grid;
+  grid-template-columns: repeat(2, var(--tile));
+  gap: calc(var(--tile) * 0.06);
+}
+.hud .hud-tile {
+  position: relative;
+  height: var(--tile);
+  padding: 0 0 calc(var(--tile) * 0.04);
+  border: calc(var(--tile) * 0.05) solid #1b1e24;
+  border-radius: calc(var(--tile) * 0.14);
+  background: linear-gradient(#454c5a, #2d323c);
+  box-shadow: inset 0 0 0 calc(var(--tile) * 0.03) rgba(255, 255, 255, 0.12), 0 calc(var(--tile) * 0.04) 0 rgba(0, 0, 0, 0.3);
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: flex-end;
-  padding-right: calc(54 * var(--u));
-  border-radius: calc(22 * var(--u));
-  background: linear-gradient(#ffffff, #e2e5ea);
-  box-shadow: 0 calc(2 * var(--u)) calc(4 * var(--u)) rgba(0, 0, 0, 0.18);
 }
-.stat-num {
-  font-size: calc(34 * var(--u));
+@media (hover: hover) {
+  .hud-tile:hover { filter: brightness(1.15); }
 }
-.stat-trophies .stat-num {
-  --fill: linear-gradient(#fff07a 15%, #ff9a00 85%);
-}
-.stat-wins .stat-num {
-  --fill: linear-gradient(#a6ecff 15%, #1f6dff 85%);
-}
-.stat-gems .stat-num {
-  --fill: linear-gradient(#ffb0f2 15%, #ff1fbf 85%);
-}
-.stat-icon {
+.tile-icon { position: absolute; top: 4%; left: 14%; width: 72%; height: 66%; }
+.tile-icon svg { width: 100%; height: 100%; filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.3)); }
+.hud-tile .tile-label { position: relative; font-size: max(10px, calc(var(--tile) * 0.2)); line-height: 1.05; white-space: nowrap; --o: max(1.4px, calc(var(--tile) * 0.025)); }
+.tile-pct {
   position: absolute;
-  right: calc(-8 * var(--u));
-  top: 50%;
-  width: calc(58 * var(--u));
-  height: calc(58 * var(--u));
-  transform: translateY(-50%);
+  top: calc(var(--tile) * -0.14);
+  right: calc(var(--tile) * 0.06);
+  font-size: max(11px, calc(var(--tile) * 0.19));
+  line-height: 1;
+  --o: max(1.4px, calc(var(--tile) * 0.025));
+}
+.tile-timer {
+  position: absolute;
+  top: calc(var(--tile) * -0.12);
+  right: calc(var(--tile) * -0.1);
+  font-size: max(10px, calc(var(--tile) * 0.15));
+  background: #e8262d;
+  border: 2px solid #fff;
+  border-radius: 99px;
+  padding: 0 0.4em;
+  line-height: 1.4;
+  --o: 1.2px;
+}
+.tile-timer.ready {
+  background: #22c43e;
+  animation: hud-pop 0.8s ease-in-out infinite;
+}
+.hud-tile.gifts:has(.tile-timer.ready) .tile-icon { animation: hud-wiggle 1.2s ease-in-out infinite; }
+@keyframes hud-pop { 50% { transform: scale(1.12); } }
+@keyframes hud-wiggle {
+  0%, 100% { transform: rotate(0); }
+  20% { transform: rotate(-12deg); }
+  40% { transform: rotate(12deg); }
+  60% { transform: rotate(0); }
 }
 
-.hud-autos {
+/* --- Bottom left: Rebirths (cyan), Wins (gold), like Wave Height Surf ------------- */
+.hud-currency {
+  --s: clamp(6px, min(0.55vw, 1.05vh), 12px);
+  position: absolute;
+  left: calc(var(--safe-l) + var(--s) * 1.6);
+  bottom: calc(var(--safe-b) + var(--s) * 0.6);
   display: flex;
   flex-direction: column;
-  gap: calc(14 * var(--u));
-  margin-top: calc(1 * var(--u));
+  align-items: flex-start;
+  gap: calc(var(--s) * 0.2);
 }
-.hud-auto {
-  height: max(var(--tap), calc(57 * var(--u)));
+.cur-row { display: flex; align-items: center; gap: calc(var(--s) * 0.6); line-height: 1; }
+.cur-icon { width: max(26px, calc(var(--s) * 4.4)); height: max(26px, calc(var(--s) * 4.4)); }
+.cur-icon svg { width: 100%; height: 100%; }
+.cur-val { font-size: max(18px, calc(var(--s) * 3.6)); --o: max(1.6px, calc(var(--s) * 0.3)); }
+.cur-row.rebirths .cur-val { color: #9fe6ff; --ink: #0a2a40; }
+.cur-row.wins .cur-icon { width: max(30px, calc(var(--s) * 5)); height: max(30px, calc(var(--s) * 5)); }
+.cur-row.wins .cur-val { color: #ffd23a; --ink: #3a2000; font-size: max(22px, calc(var(--s) * 4.4)); }
+.cur-row.wins.pop .cur-icon { animation: cur-pop 0.5s ease-out; }
+@keyframes cur-pop { 30% { transform: scale(1.5) rotate(-10deg); } }
+.cur-friends { display: flex; align-items: center; gap: calc(var(--s) * 0.6); font-size: max(14px, calc(var(--s) * 2.5)); --o: max(1.2px, calc(var(--s) * 0.2)); }
+.cur-friends .friends-add { width: max(28px, calc(var(--s) * 3.8)); height: max(28px, calc(var(--s) * 3.8)); background: #2fd24a; border-radius: 22%; box-shadow: 0 0 0 2px #16131f; }
+.cur-friends .friends-add svg { width: 100%; height: 100%; }
+
+/* --- Tutorial banner: yellow lego plate, top centre ------------------------------- */
+.hud-tutorial {
+  --stud: calc(24 * var(--u));
+  position: absolute;
+  left: 50%;
+  top: calc(var(--safe-t) + 60 * var(--u));
+  transform: translateX(-50%);
+  width: min(calc(792 * var(--u)), 78vw);
+  height: max(50px, calc(84 * var(--u)));
+  border: calc(3 * var(--u)) solid #16131f;
+  border-radius: calc(12 * var(--u));
+  background-color: #ffd23a;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='25' height='25'%3E%3Crect x='6' y='6' width='13' height='13' rx='3' fill='white' fill-opacity='.22' stroke='%23b8860b' stroke-opacity='.4'/%3E%3C/svg%3E"), linear-gradient(#ffe98a, #ffc22a);
+  background-size: var(--stud) var(--stud), 100% 100%;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  transition: opacity 0.25s;
+}
+.tut-title { position: absolute; top: calc(-14 * var(--u)); font-size: max(13px, calc(25 * var(--u))); --ink: #16131f; color: #ffd23a; }
+.tut-text { font-size: max(20px, calc(50 * var(--u))); line-height: 1; white-space: nowrap; --o: calc(3.4 * var(--u)); }
+
+/* --- The distance during a throw ---------------------------------------------------- */
+.hud-distance {
+  position: absolute;
+  left: 50%;
+  top: calc(var(--safe-t) + 96 * var(--u));
+  transform: translateX(-50%);
+  font-size: max(34px, calc(76 * var(--u)));
+  line-height: 1;
+  color: #ffd23a;
+  --ink: #6a3a00;
+  --o: calc(3.4 * var(--u));
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+/* --- Bottom centre: THROW, SKILL + multiplier, the level bar ------------------------- */
+.hud-dock {
+  position: absolute;
+  left: 50%;
+  bottom: calc(var(--safe-b) + 128 * var(--u));
+  transform: translateX(-50%);
+  width: min(calc(792 * var(--u)), 62vw);
+  min-width: 300px;
   display: flex;
+  flex-direction: column;
   align-items: center;
   gap: calc(6 * var(--u));
-  padding-left: calc(10 * var(--u));
-  border: max(2px, calc(4 * var(--u))) solid #ff9e9e;
-  border-radius: calc(10 * var(--u));
-  background: linear-gradient(#ff5e5e, #e0252b);
-  box-shadow: 0 0 0 max(1px, calc(2 * var(--u))) #6e0d10;
+  transition: bottom 0.3s;
 }
-.hud-auto.on {
-  border-color: #b8ffb0;
-  background: linear-gradient(#5fe25a, #1fa52a);
-  box-shadow: 0 0 0 max(1px, calc(2 * var(--u))) #0b4a10;
-}
-.auto-icon {
-  flex: none;
-  width: calc(42 * var(--u));
-  height: calc(42 * var(--u));
-}
-.auto-label {
-  font-size: calc(27 * var(--u));
-}
-
-.hud-boosts {
+.hud-throw {
   display: flex;
-  gap: calc(8 * var(--u));
-  margin: calc(3 * var(--u)) 0 0 calc(7 * var(--u));
+  flex-direction: column;
+  align-items: center;
+  gap: calc(6 * var(--u));
+  opacity: 0;
+  transform: scale(0.6);
+  transition: opacity 0.14s, transform 0.18s cubic-bezier(0.3, 1.6, 0.6, 1);
+  pointer-events: none;
 }
-.hud-boost {
-  --c: #ffc21a;
-  flex: none;
-  width: max(var(--tap), calc(56 * var(--u)));
-  height: max(var(--tap), calc(56 * var(--u)));
-  border-radius: 50%;
-  border: max(2px, calc(4 * var(--u))) solid var(--c);
-  background: radial-gradient(circle at 50% 35%, var(--hi), var(--lo));
-  box-shadow: 0 0 0 max(1px, calc(2 * var(--u))) var(--ink);
+.hud-throw.show { opacity: 1; transform: none; }
+.hud-throw.show .throw-btn { pointer-events: auto; animation: throw-breathe 1s ease-in-out infinite; }
+.hud .throw-btn {
+  width: max(150px, calc(268 * var(--u)));
+  height: max(68px, calc(108 * var(--u)));
+  border: calc(3.5 * var(--u)) solid #16131f;
+  border-radius: calc(16 * var(--u));
+  background-color: #33d447;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='25' height='25'%3E%3Crect x='6' y='6' width='13' height='13' rx='3' fill='white' fill-opacity='.2' stroke='%23127a24' stroke-opacity='.45'/%3E%3C/svg%3E"), linear-gradient(#5cf06a, #22c03a);
+  background-size: calc(25 * var(--u)) calc(25 * var(--u)), 100% 100%;
+  box-shadow: 0 calc(5 * var(--u)) 0 rgba(0, 0, 0, 0.35);
+  font-size: max(34px, calc(70 * var(--u)));
+  line-height: 1;
+  --o: calc(3.6 * var(--u));
 }
-.boost-gold {
-  --hi: #fff1a0;
-  --lo: #f2a900;
+@keyframes throw-breathe { 50% { transform: scale(1.05); } }
+.throw-hint { font-size: max(12px, calc(16 * var(--u))); --o: max(1.2px, calc(1.8 * var(--u))); }
+.hud-level { width: 100%; }
+.lv-row { display: flex; align-items: center; justify-content: space-between; padding: 0 calc(6 * var(--u)); margin-bottom: calc(4 * var(--u)); font-size: max(17px, calc(32 * var(--u))); line-height: 1; white-space: nowrap; }
+.lv-skill { display: flex; align-items: center; gap: 0.18em; color: #ffd23a; --ink: #3a2000; }
+.lv-bolt { width: 0.86em; }
+.lv-mult { color: #ffd23a; --ink: #3a2000; }
+.lv-up { opacity: 0; color: #fff; }
+.lv-up.show { animation: lv-up 1.3s ease-out; }
+@keyframes lv-up {
+  0% { opacity: 0; transform: scale(0.6); }
+  12% { opacity: 1; transform: scale(1.25); }
+  24% { transform: scale(1); }
+  80% { opacity: 1; }
+  100% { opacity: 0; }
 }
-.boost-blue {
-  --c: #3aa6ff;
-  --hi: #b4ecff;
-  --lo: #2a74e8;
+.lv-bar {
+  position: relative;
+  height: max(36px, calc(84 * var(--u)));
+  border: calc(3.5 * var(--u)) solid #16131f;
+  border-radius: calc(12 * var(--u));
+  overflow: hidden;
+  background-color: #dfe2e8;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='25' height='25'%3E%3Crect x='6' y='6' width='13' height='13' rx='3' fill='white' fill-opacity='.6' stroke='%238890a0' stroke-opacity='.4'/%3E%3C/svg%3E"), linear-gradient(#f4f5f8, #c9cdd6);
+  background-size: calc(25 * var(--u)) calc(25 * var(--u)), 100% 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 calc(20 * var(--u));
+  font-size: max(19px, calc(44 * var(--u)));
+  line-height: 1;
+  --o: calc(3.2 * var(--u));
 }
-.boost-purple {
-  --c: #b45cff;
-  --hi: #7a52c8;
-  --lo: #2c1658;
-}
-.boost-icon {
+.lv-fill {
   position: absolute;
-  inset: 14%;
+  inset: 0 auto 0 0;
+  width: 0;
+  background-color: #1a8cff;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='25' height='25'%3E%3Crect x='6' y='6' width='13' height='13' rx='3' fill='white' fill-opacity='.2' stroke='%23004a9a' stroke-opacity='.45'/%3E%3C/svg%3E"), linear-gradient(#35b0ff, #0a6ae0);
+  background-size: calc(25 * var(--u)) calc(25 * var(--u)), 100% 100%;
+  transition: width 0.18s;
 }
-.boost-label {
-  position: absolute;
-  right: -8%;
-  bottom: -8%;
-  font-size: calc(21 * var(--u));
-}
+.lv-name, .lv-count { position: relative; }
 
-/* --- Bottom: hotbar + distance bars --------------------------------------------------------------------- */
-.hud-bottom {
-  --side: 0px; /* room kept free on each side (touch buttons) */
-  --lift: 0px; /* raise above the touch buttons */
+/* --- A throw on screen: menus out, cinema bars in ------------------------------------- */
+.hud-grid, .hud-topright { transition: opacity 0.2s; }
+.hud.running .hud-grid, .hud.running .hud-topright, .hud.running .hud-tutorial { opacity: 0; pointer-events: none; }
+.hud.running .hud-grid *, .hud.running .hud-topright * { pointer-events: none; }
+.hud.running .hud-distance { opacity: 1; }
+.hud.running .hud-dock { bottom: calc(var(--safe-b) + 190 * var(--u)); }
+.hud.running .hud-currency { transform: translateY(calc(-58 * var(--u))); }
+.hud-currency { transition: transform 0.3s; }
+.hud-bars { position: fixed; inset: 0; z-index: 10; pointer-events: none; }
+.hud-bars i {
   position: absolute;
   left: 0;
   right: 0;
-  bottom: calc(var(--sb) + 10 * var(--u) + var(--lift));
-  width: min(calc(1044 * var(--u)), calc(100% - 2 * var(--side) - var(--sl) - var(--sr) - 24px - 30 * var(--u)));
-  margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: calc(12 * var(--u));
+  height: 6%;
+  background: #17323c;
+  opacity: 0.94;
+  transition: transform 0.3s;
 }
-.hud-hotbar {
-  display: flex;
-  align-items: center;
-  gap: calc(17 * var(--u));
-}
-.hud-slot {
-  width: max(var(--tap), calc(80 * var(--u)));
-  height: max(var(--tap), calc(78 * var(--u)));
-  --icon: 80%;
-  border: max(1.5px, calc(3 * var(--u))) solid #f2d84a;
-  border-radius: calc(12 * var(--u));
-  background: rgba(214, 220, 228, 0.5);
-}
-.hud-slot.sel {
-  border-color: #fff;
-  background: rgba(255, 255, 255, 0.65);
-  box-shadow: 0 0 0 max(1.5px, calc(3 * var(--u))) #f2d84a;
-}
-.slot-divider {
-  width: max(2px, calc(4 * var(--u)));
-  height: calc(72 * var(--u));
-  border-radius: 2px;
-  background: rgba(255, 255, 255, 0.9);
-}
+.hud-bars i:first-child { top: 0; transform: translateY(-101%); }
+.hud-bars i:last-child { bottom: 0; transform: translateY(101%); }
+.hud-bars.show i { transform: none; }
+.hud-flash { position: fixed; inset: 0; z-index: 11; pointer-events: none; background: radial-gradient(circle at 50% 46%, #fff 0, #fff3c8 45%, #ffb24a 100%); opacity: 0; }
+.hud-flash.go { animation: hud-flash 0.42s ease-out; }
+@keyframes hud-flash { 0% { opacity: 1; } 100% { opacity: 0; } }
 
-.hud-bars {
-  position: relative;
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: calc(7 * var(--u));
-}
-.bar-row {
-  position: relative;
-  display: flex;
-  height: calc(36 * var(--u));
-  min-height: 14px;
-  outline: max(1px, calc(2 * var(--u))) solid rgba(20, 20, 30, 0.45);
-}
-.bar-seg {
-  flex: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: visible;
-}
-.bar-label {
-  font-size: max(10px, calc(23 * var(--u)));
-}
-.bar-row-0 .bar-label {
-  font-size: max(11px, calc(25 * var(--u)));
-}
-.bar-gem {
-  position: absolute;
-  right: calc(-28 * var(--u));
-  top: 50%;
-  width: calc(56 * var(--u));
-  height: calc(56 * var(--u));
-  transform: translateY(-50%);
-}
-.bar-marker,
-.bar-racer {
-  --row: 2;
-  position: absolute;
-  top: calc(var(--row) * 43 * var(--u) - 4 * var(--u));
-}
-.bar-racer {
-  width: calc(44 * var(--u));
-  height: calc(44 * var(--u));
-  margin-left: calc(-22 * var(--u));
-  filter: drop-shadow(0 calc(2 * var(--u)) calc(2 * var(--u)) rgba(0, 0, 0, 0.35));
-  transition: left 0.3s, top 0.3s;
-}
-.bar-marker {
-  top: calc(var(--row) * 43 * var(--u) - 19 * var(--u));
-  z-index: 1;
-  width: calc(46 * var(--u));
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  transform: translateX(-50%);
-  transition: left 0.3s;
-}
-.marker-arrow {
-  width: 0;
-  height: 0;
-  border-left: calc(10 * var(--u)) solid transparent;
-  border-right: calc(10 * var(--u)) solid transparent;
-  border-top: calc(15 * var(--u)) solid #fff;
-  filter: drop-shadow(0 0 max(1px, calc(1.5 * var(--u))) #000) drop-shadow(0 0 max(1px, calc(1.5 * var(--u))) #000);
-}
-.marker-head {
-  width: calc(46 * var(--u));
-  height: calc(46 * var(--u));
-}
-/* A racer's Bloxity profile picture (bar heads, the player's marker, podium medals; hud.js paintFace) */
-.racer-pfp {
-  display: block;
-  width: 100%;
-  height: 100%;
-  box-sizing: border-box;
-  border-radius: 50%;
-  border: max(2px, calc(3 * var(--u))) solid #fff;
-  background: #cfe6ff;
-  object-fit: cover;
-  pointer-events: none;
-}
-
-/* --- Bottom-left boosts ------------------------------------------------------------------------------------ */
-.hud-bl {
-  position: fixed;
-  left: calc(var(--sl) + 8 * var(--u));
-  bottom: calc(var(--sb) + 6 * var(--u));
-  display: flex;
-  gap: calc(14 * var(--u));
-}
-.bl-item {
-  width: max(var(--tap), calc(50 * var(--u)));
-  height: max(var(--tap), calc(56 * var(--u)));
-}
-.bl-icon {
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 84%;
-}
-.bl-label {
+/* --- Toasts: their own layer over the windows (100) and the hatch overlay (110) -- */
+.hud.hud-top { z-index: 120; }
+.hud-toasts {
   position: absolute;
   left: 50%;
-  bottom: 0;
+  top: calc(var(--safe-t) + 104 * var(--u));
   transform: translateX(-50%);
-  font-size: max(10px, calc(17 * var(--u)));
-}
-
-/* ============================================================================================
-   Adaptations. Desktop keeps the reference layout above; touch screens grow every
-   control to --tap and keep the joystick (bottom-left) and JUMP/RUN/CAM cluster
-   (bottom-right, sizes copied from touch.css) clear.
-   ============================================================================================ */
-.hud {
-  --rw: max(calc(210 * var(--u)), calc(3 * var(--tap) + 30 * var(--u))); /* right column */
-  --cluster: calc(clamp(72px, 20vmin, 100px) + clamp(52px, 14vmin, 70px) + 12px + clamp(12px, 3vmin, 24px));
-}
-/* Boxity's toolbar has the menu (with Reset Character), so the touch layer's own
-   top-right buttons would only cover the round buttons. */
-.touch-ui .touch-top {
-  display: none;
-}
-/* Compact right column on touch: the full-width AUTO bars and the row of three boost
-   circles covered the middle of a phone screen. The autos become two TRAIN / RACE
-   tiles side by side and the boosts (one action) fan into an overlapping stack. */
-.touch-ui .hud {
-  --rw: max(calc(210 * var(--u)), calc(2 * var(--tap) + 6px));
-}
-.touch-ui .hud-autos {
-  flex-direction: row;
-  gap: 6px;
-  margin-top: 0;
-}
-.touch-ui .hud-auto {
-  flex: 1 1 0;
-  min-width: var(--tap);
-  height: var(--tap);
-  flex-direction: column;
-  justify-content: center;
-  gap: 1px;
-  padding: 0;
-  border-radius: 10px;
-}
-.touch-ui .auto-icon {
-  width: 22px;
-  height: 22px;
-}
-.touch-ui .auto-label {
-  font-size: 10px;
-  --o: 1px;
-}
-.touch-ui .auto-pre {
-  display: none;
-}
-.touch-ui .hud-boosts {
-  margin: 0;
-}
-.touch-ui .hud-boost + .hud-boost {
-  margin-left: calc(var(--tap) * -0.55);
-}
-.touch-ui .boost-label {
-  display: none;
-}
-/* Boosts sit beside the hotbar on touch: the corner belongs to the joystick. */
-.touch-ui .hud-bl {
-  position: absolute;
-  left: 0;
-  top: 0;
-}
-
-/* --- Touch, landscape: top row (round buttons) on the right, bars stay between the joystick and the buttons. */
-.touch-ui .hud:not(.portrait) .hud-top {
   display: flex;
-  align-items: flex-start;
-  justify-content: flex-end; /* the top-left corner is Boxity's toolbar */
-  gap: 10px;
-  padding: calc(15 * var(--u)) calc(15 * var(--u)) 0 calc(20 * var(--u));
+  flex-direction: column;
+  align-items: center;
+  gap: calc(6 * var(--u));
 }
-.touch-ui .hud:not(.portrait) .hud-top > * {
-  position: relative;
-  left: auto;
-  right: auto;
-  top: auto;
-  margin: 0;
-  flex: none;
+.hud-toast {
+  font-size: max(15px, calc(28 * var(--u)));
+  white-space: nowrap;
+  animation: toast-in 0.2s ease-out;
+  transition: opacity 0.4s, transform 0.4s;
 }
-.touch-ui .hud:not(.portrait) .hud-timer {
-  flex: 0 1 var(--w);
-  min-width: 110px;
-  height: max(var(--tap), calc(65 * var(--u)));
-  margin-left: auto;
-}
-.touch-ui .hud:not(.portrait) .hud-daily {
-  min-width: 64px;
-  min-height: 46px;
-  margin-right: auto;
-}
-.touch-ui .hud:not(.portrait) .hud-podium {
-  top: calc(var(--st) + 8px);
-}
-.touch-ui .hud:not(.portrait) .hud-bottom {
-  --side: var(--cluster);
-}
+.hud-toast.good { color: #5cff6a; }
+.hud-toast.warn { color: #ff6b6b; }
+.hud-toast.out { opacity: 0; transform: translateY(-10px); }
+@keyframes toast-in { from { transform: scale(0.6); } }
 
-/* Podium on touch: small medals without ribbons, up in the free middle of the top row
-   (in landscape it hung right over the boat). */
-.touch-ui .hud .hud-podium {
-  --m: 32px;
-  gap: 8px;
-  margin-left: -52px; /* (3 x 32 + 2 x 8) / 2 */
+/* --- Small screens: the tiles go three across, the numbers become one row ----- */
+@media (max-height: 520px) {
+  .hud-grid { top: max(30%, calc(var(--res-top) + 8px)); }
+  .hud-currency { flex-direction: row; left: 50%; transform: translateX(-50%); top: calc(var(--safe-t) + 10px); bottom: auto; gap: 14px; }
+  .hud.running .hud-currency { transform: translateX(-50%); }
+  .cur-friends { display: none; }
+  .hud-tutorial, .hud-distance { top: calc(var(--safe-t) + 52px); }
+  .hud-tutorial { height: 34px; }
+  .tut-title { display: none; }
+  .tut-text { font-size: 18px; }
+  .hud-dock { bottom: calc(var(--safe-b) + 6px); transform: translateX(-50%); width: min(46vw, 340px); min-width: 0; }
+  .hud.running .hud-dock { bottom: calc(var(--safe-b) + 6px + 6%); }
 }
-.touch-ui .medal {
-  border-width: 2px;
+/* Portrait: the counters move top-right on touch (the joystick owns the bottom-left);
+   short portrait phones get the menu three wide. */
+@media (orientation: portrait) {
+  .touch-ui .hud-currency { bottom: auto; top: calc(var(--safe-t) + 70px); right: calc(var(--safe-r) + 12px); left: auto; align-items: flex-end; }
+  .touch-ui .cur-row { flex-direction: row-reverse; }
+  .hud-dock { width: 92vw; min-width: 0; bottom: calc(var(--safe-b) + 150px); transform: translateX(-50%); }
+  .touch-ui .hud-dock { bottom: calc(var(--safe-b) + 190px); }
+  .hud.running .hud-dock { bottom: calc(var(--safe-b) + 7% + 116px); }
+  .touch-ui .hud.running .hud-dock { bottom: calc(var(--safe-b) + 7% + 12px); }
+  .hud-tutorial { width: 86vw; top: calc(var(--safe-t) + 196px); }
+  .hud-distance { top: calc(var(--safe-t) + 12% + 8px); }
 }
-.touch-ui .medal-ribbon {
-  display: none;
-}
-.touch-ui .medal-label {
-  bottom: -8px;
-  font-size: 12px;
-  --o: 1px;
-}
-/* The menu tiles go 3 x 2 so the left column ends well above the joystick. */
-.touch-ui .hud:not(.portrait) .hud-grid {
-  grid-template-columns: repeat(3, var(--tile));
-  gap: 6px;
-  margin: 6px 0 0;
-}
-.touch-ui .hud.short .hud-left {
-  top: calc(var(--st) + 15 * var(--u) + var(--tap) + 8px);
-}
-
-/* Phone landscape: the right column splits in two so it ends above the buttons. */
-.touch-ui .hud.short .hud-right {
-  top: calc(var(--st) + 15 * var(--u) + var(--tap) + 8px);
-  flex-direction: row-reverse;
-  align-items: flex-start;
-  gap: 10px;
-}
-
-/* --- Portrait: round buttons in a 3x2 grid, timer under the logo, daily between the columns. */
-.hud.portrait .hud-tr {
-  display: grid;
-  grid-template-columns: repeat(3, auto);
-}
-.hud.portrait .hud-timer {
-  --trw: calc(3 * max(var(--tap), calc(56 * var(--u))) + 28 * var(--u));
-  left: calc(20 * var(--u));
-  top: var(--timer-top);
-  width: calc(100% - var(--trw) - 35 * var(--u) - 16px);
-  height: max(30px, calc(65 * var(--u)));
-  margin-left: 0;
-}
-.hud.portrait {
-  --gap-mid: calc((222 * var(--u) + 100% - 30 * var(--u) - var(--rw)) / 2); /* centre of the gap between the columns */
-  --timer-top: calc(15 * var(--u) + max(var(--tap), calc(55 * var(--u))) + 8px);
-  --podium-top: calc(var(--timer-top) + max(30px, calc(65 * var(--u))) + 6px);
-}
-.hud.portrait .hud-podium {
-  left: var(--gap-mid);
-  top: calc(var(--st) + var(--podium-top));
-  gap: calc(10 * var(--u));
-  --m: calc(66 * var(--u));
-  margin-left: calc(-109 * var(--u)); /* (3 x 66 + 2 x 10) / 2 */
-}
-.hud.portrait .hud-daily {
-  /* centred in the gap between the CLAIM pill and the right column, under the podium */
-  left: var(--gap-mid);
-  top: calc(var(--st) + var(--podium-top) + 66 * var(--u) + 14px);
-  min-width: 64px;
-  min-height: 46px;
-  margin-left: calc(-75 * var(--u));
-}
-.touch-ui .hud.portrait .hud-bottom {
-  --lift: calc(var(--cluster) + 8px - 10 * var(--u));
-}
-
-/* A window open on touch (body.uiw-open, uiWindow.js): the HUD and touch buttons only
-   cluttered its edges and ran under its title (the backdrop takes every tap anyway).
-   The trophy / lightning counters stay so prices can be checked against them. */
-.touch-ui.uiw-open .hud > :not(.hud-right),
-.touch-ui.uiw-open .right-b,
-.touch-ui.uiw-open .touch-cluster,
-.touch-ui.uiw-open .joy-base {
-  visibility: hidden;
-}
-.touch-ui.uiw-open .hud-right {
-  top: calc(var(--st) + 8px);
-}
-
-/* Scene mode (hud.setScene, e.g. the Trails scene): only the round buttons stay. */
-.hud.scene .hud-podium,
-.hud.scene .hud-timer,
-.hud.scene .hud-daily,
-.hud.scene .hud-left,
-.hud.scene .hud-right,
-.hud.scene .hud-bottom {
-  display: none;
+@media (orientation: portrait) and (max-height: 720px) {
+  .hud-grid { grid-template-columns: repeat(3, var(--tile)); }
 }
