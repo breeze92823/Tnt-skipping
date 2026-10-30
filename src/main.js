@@ -1,5 +1,5 @@
 import { Clock, NeutralToneMapping, Group, PCFSoftShadowMap, PerspectiveCamera, Scene, SRGBColorSpace, WebGLRenderer } from 'three'
-import { CAMERA, GAME_TITLE, graphicsPreset, INTERACT, LOBBY, PET_KINDS, RENDER, TNTS, TUTORIAL_THROWS } from './config.js'
+import { CAMERA, GAME_TITLE, graphicsPreset, INTERACT, LOBBY, PET_KINDS, RENDER, TNTS } from './config.js'
 import { installInteract, isInteractShowing, press as pressInteract, registerZone, setInteractEnabled, updateInteract } from './interact.js'
 import { sfx } from './audio.js'
 import * as bloxity from './bloxity.js'
@@ -151,7 +151,6 @@ function syncHud() {
   hud.setCalendarBadge(progress.dailyReady())
   hud.setLevel(progress.levelBar())
   hud.setMultiplier(progress.skillMult())
-  hud.setTutorial(S.throws, TUTORIAL_THROWS)
   const level = progress.rebirthLevel()
   if (level > shownLevel) {
     hud.levelUp()

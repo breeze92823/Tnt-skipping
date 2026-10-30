@@ -4,7 +4,7 @@ import { ICON, pawIcon, rebirthIcon, trailIcon } from './icons.js'
 
 // The on-screen HUD: the menu tiles on the left (Rebirth, Pets, Trails, Inventory, Gifts),
 // the Daily Rewards calendar top-right, Rebirths / Wins / Friend Boost bottom-left, SKILL,
-// the multiplier and the level bar bottom-centre, the tutorial banner, THROW and the
+// the multiplier and the level bar bottom-centre, THROW and the
 // toasts. While a throw runs the menus go, cinema bars close in and the distance shows
 // (`.running`). Plain DOM; main.js pushes numbers in, windows.js listens for presses with
 // on(name, fn). Ported in spirit from Clap to Destroy's hud.js.
@@ -72,11 +72,9 @@ export function createHud() {
   cur.append(friends)
   root.append(cur)
 
-  // --- Top centre: the tutorial banner; the distance during a throw ---
-  const tutorial = el('div', 'hud-tutorial', `<span class="tut-title stroke">TUTORIAL</span><span class="tut-text stroke"></span>`)
-  const tutorialText = tutorial.querySelector('.tut-text')
+  // --- Top centre: the distance during a throw ---
   const distance = el('div', 'hud-distance stroke')
-  root.append(tutorial, distance)
+  root.append(distance)
 
   // --- Bottom centre: THROW over SKILL, the multiplier and the level bar ---
   const dock = el('div', 'hud-dock')
@@ -148,11 +146,6 @@ export function createHud() {
     // THROW shows on the yellow band.
     setThrow(show) {
       throwWrap.classList.toggle('show', show)
-    },
-    // `n` throws done: the banner counts to `of`, then leaves.
-    setTutorial(n, of) {
-      tutorial.hidden = n >= of
-      tutorialText.textContent = `THROW TNT! (${n}/${of})`
     },
     setRunning(on) {
       root.classList.toggle('running', on)

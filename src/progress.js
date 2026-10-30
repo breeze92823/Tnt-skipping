@@ -15,7 +15,7 @@ function fresh() {
     skill: 0,
     wins: 0,
     rebirths: 0,
-    throws: 0, // finished throws (the tutorial counts the first two)
+    throws: 0, // finished throws
     bestDistance: 0,
     playtime: 0, // s with the game visible, all sessions (net.js counts it; the leaderboard's Time Played)
     spent: 0, // Robux spent (no checkout yet)

@@ -1,31 +1,27 @@
 import {
   AdditiveBlending,
-  BackSide,
   CatmullRomCurve3,
   CircleGeometry,
   Color,
   CylinderGeometry,
-  ExtrudeGeometry,
   Group,
   InstancedMesh,
   Mesh,
   MeshBasicMaterial,
   MeshStandardMaterial,
   Object3D,
-  RepeatWrapping,
-  Shape,
   Vector3,
 } from 'three'
 import { LOBBY, TRAIN } from '../config.js'
 import { RAPIER, world } from '../physics.js'
 import { neon } from '../propkit.js'
 import { mulberry32, paintCrate, paintLaneWater, paintPlanks, toTexture } from '../textures.js'
-import { addBox, canvasTex, dynamic, legoBox, localSolid, plain, resign, sign, studMat, topStuds } from './kit.js'
+import { addBox, canvasTex, legoBox, localSolid, plain, resign, sign, studMat, topStuds } from './kit.js'
 import { paintBullseye, paintHazard, paintLaneMat } from './paint.js'
 
 // The skill training lanes east of spawn (seven side by side, each running
 // east to a target wall with a crate pyramid), the red/yellow brick path that
-// leads from spawn to lane 1, and the bouncing tutorial arrow above it.
+// leads from spawn to lane 1.
 const C = LOBBY.colors
 
 const shade = (hex, k) => {
@@ -211,48 +207,6 @@ function memoCrate() {
   return crateMat
 }
 
-// The tutorial arrow: an extruded down-arrow with a yellow->orange face and a dark outline.
-function arrow() {
-  const s = new Shape()
-  const sw = 0.75
-  const hw = 1.55
-  s.moveTo(0, 0)
-  s.lineTo(hw, 1.6)
-  s.lineTo(sw, 1.6)
-  s.lineTo(sw, 3.4)
-  s.quadraticCurveTo(sw, 3.6, sw - 0.2, 3.6)
-  s.lineTo(-sw + 0.2, 3.6)
-  s.quadraticCurveTo(-sw, 3.6, -sw, 3.4)
-  s.lineTo(-sw, 1.6)
-  s.lineTo(-hw, 1.6)
-  s.closePath()
-  const geo = new ExtrudeGeometry(s, { depth: 0.45, bevelEnabled: true, bevelThickness: 0.12, bevelSize: 0.12, bevelSegments: 3 })
-  geo.translate(0, 0, -0.225)
-  const c = document.createElement('canvas')
-  c.width = 4
-  c.height = 128
-  const ctx = c.getContext('2d')
-  const grd = ctx.createLinearGradient(0, 0, 0, 128)
-  grd.addColorStop(0, '#ffe23a')
-  grd.addColorStop(0.55, '#ffc21a')
-  grd.addColorStop(1, '#ff8a00')
-  ctx.fillStyle = grd
-  ctx.fillRect(0, 0, 4, 128)
-  const tex = canvasTex(c, { repeat: [1, 1 / 3.6] })
-  tex.wrapT = RepeatWrapping
-  const face = new MeshStandardMaterial({ map: tex, roughness: 0.35, emissive: '#ff9a00', emissiveIntensity: 0.25 })
-  const side = new MeshStandardMaterial({ color: '#f08a00', roughness: 0.4, emissive: '#7a3a00', emissiveIntensity: 0.2 })
-  const g = new Group()
-  const body = new Mesh(geo, [face, side])
-  body.castShadow = true
-  g.add(body)
-  const outline = new Mesh(geo, new MeshBasicMaterial({ color: '#2a1600', side: BackSide }))
-  outline.scale.set(1.09, 1.06, 1.25)
-  outline.position.y = -0.1
-  g.add(outline)
-  return g
-}
-
 export function buildLanes(scene) {
   const L = LOBBY.lanes
   const root = new Group()
@@ -319,17 +273,12 @@ export function buildLanes(scene) {
     addBox(root, 1.6, 0.4, 0.8, topStuds(studMat('#ffd21a'), plain('#f2c30f')), x, 0.27, z).rotation.y = r
   }
 
-  const tutorialArrow = arrow()
-  tutorialArrow.scale.setScalar(2.2)
-  tutorialArrow.position.set(bank1.startX + bank1.length - 3.4, 8, centers[0])
-  root.add(dynamic(tutorialArrow))
   scene.add(root)
 
   const tint = new Color()
   const pulse = new Color('#ffe14a')
   return {
     glints,
-    arrowPos: tutorialArrow.position,
     // Flips each sign's LOCKED / UNLOCKED to the player's rebirths.
     setRebirths(n) {
       for (const sg of signs) {
@@ -341,8 +290,6 @@ export function buildLanes(scene) {
     },
     update(dt, t, camera) {
       for (const tex of waterTexs) tex.offset.y = t * 0.35
-      tutorialArrow.position.y = 8 + Math.abs(Math.sin(t * 3)) * 1.3
-      tutorialArrow.rotation.y = Math.atan2(camera.position.x - tutorialArrow.position.x, camera.position.z - tutorialArrow.position.z)
       hl.material.opacity = 0.16 + Math.sin(t * 3) * 0.08
       // A bright pulse running along the path toward the lane.
       const head = (t * 9) % (count + 10)

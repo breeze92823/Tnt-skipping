@@ -403,7 +403,6 @@ export const TRAIN = {
 // The yellow band across the start of the lane. Nobody walks past `minZ`: a wall stands
 // there, the lane is only ever crossed by a thrown TNT.
 export const THROW_ZONE = { maxZ: -30, minZ: -37, line: 0.6 }
-export const TUTORIAL_THROWS = 2 // the banner's THROW TNT! (n/2)
 // Lane metres count north from z0. Skill sets the range, the range sets how long the TNT
 // flies and how many times it skips; each skip pays the equipped TNT's Skill and the blast
 // pays it once per `blastSkillEvery` m. Zones pay `wins` per blast (x the Wins multiplier).
